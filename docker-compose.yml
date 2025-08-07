@@ -1,0 +1,52 @@
+
+services:
+  server:
+    container_name: api-template
+    build:
+      context: .
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${HOST}
+      HOST: ${HOST}
+      LOG_LEVEL: ${LOG_LEVEL}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_POOL_MIN: ${DB_POOL_MIN}
+      DB_POOL_MAX: ${DB_POOL_MAX}
+      OTEL_ENABLED: ${OTEL_ENABLED}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME}
+      OTEL_URL: ${OTEL_URL}
+    networks:
+      - app-network
+    ports:
+      - 3000:3000
+    depends_on:
+      - mysql
+  
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./src/database/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
