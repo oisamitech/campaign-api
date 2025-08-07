@@ -1,52 +1,44 @@
-// Need to first import
-import './telemetry';
+import { startServer } from './app.js'
 
-import { buildApp } from './app';
-import { config } from './config';
-import { testConnection } from './database/connection';
+let server: any
 
-async function main() {
-	try {
-		// Test database connection
-		const dbConnected = await testConnection();
-		if (!dbConnected) {
-			console.error('Failed to connect to database. Exiting...');
-			process.exit(1);
-		}
+async function gracefulShutdown(signal: string) {
+  console.log(`\n${signal} received. Starting graceful shutdown...`)
 
-		// Build and start the application
-		const app = await buildApp();
+  if (server) {
+    try {
+      await server.close()
+      console.log('Server closed successfully')
+    } catch (error) {
+      console.error('Error closing server:', error)
+    }
+  }
 
-		// Start the server
-		await app.listen({
-			port: config.app.port,
-			host: config.app.host,
-		});
-
-		console.log(
-			`Server is running at http://${config.app.host}:${config.app.port}`,
-		);
-		console.log(
-			`API documentation available at http://${config.app.host}:${config.app.port}/documentation`,
-		);
-
-		// Handle graceful shutdown
-		const signals = ['SIGINT', 'SIGTERM'] as const;
-		signals.forEach((signal) => {
-			process.on(signal, async () => {
-				console.log(`Received ${signal}, shutting down...`);
-
-				await app.close();
-				console.log('Server closed');
-
-				process.exit(0);
-			});
-		});
-	} catch (error) {
-		console.error('Failed to start server:', error);
-		process.exit(1);
-	}
+  process.exit(0)
 }
 
-// Start the application
-main();
+async function start() {
+  try {
+    server = await startServer()
+
+    // Configurar graceful shutdown
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'))
+
+    // Tratamento de erros não capturados
+    process.on('uncaughtException', error => {
+      console.error('Uncaught Exception:', error)
+      gracefulShutdown('uncaughtException')
+    })
+
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('Unhandled Rejection at:', promise, 'reason:', reason)
+      gracefulShutdown('unhandledRejection')
+    })
+  } catch (error) {
+    console.error('Failed to start server:', error)
+    process.exit(1)
+  }
+}
+
+start()

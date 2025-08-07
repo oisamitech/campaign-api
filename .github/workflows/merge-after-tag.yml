@@ -2,7 +2,7 @@ name: 'Merge Main to Development after Release'
 
 on:
   workflow_run:
-    workflows: ["Automatic create tag version"]
+    workflows: ['Automatic create tag version']
     types:
       - completed
 
@@ -24,22 +24,22 @@ jobs:
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          
+
       - name: Get latest tag
         id: get-latest-tag
         run: |
           LATEST_TAG=$(git describe --tags --abbrev=0)
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          
+
       - name: Check if tag was created on main
         id: check-branch
         run: |
           TAG_COMMIT=$(git rev-list -n 1 ${{ steps.get-latest-tag.outputs.latest_tag }})
           TAG_BRANCH=$(git branch -r --contains $TAG_COMMIT | grep -E 'origin/(main|master)' || echo "")
-          
+
           echo "TAG_COMMIT: $TAG_COMMIT"
           echo "TAG_BRANCH: $TAG_BRANCH"
-          
+
           if [[ -n "$TAG_BRANCH" ]]; then
             echo "is_main_tag=true" >> $GITHUB_OUTPUT
           else

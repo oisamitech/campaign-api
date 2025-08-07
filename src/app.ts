@@ -1,93 +1,48 @@
-import cors from '@fastify/cors';
-import swagger from '@fastify/swagger';
-import swaggerUi from '@fastify/swagger-ui';
-import fastify, { FastifyInstance } from 'fastify';
-import { config } from './config';
-import { registerRoutes } from './routes';
+import Fastify, { FastifyInstance } from 'fastify'
+import { env } from './config/env.js'
+import { configureFastify } from './infra/fastify-config.js'
+import { errorHandler, requestLogger } from './infra/hooks/index.js'
+import { registerRoutes } from './routes/index.js'
 
-export async function buildApp(): Promise<FastifyInstance> {
-	const app = fastify({
-		logger: {
-			level: config.app.logLevel,
-			transport: {
-				target: 'pino-pretty',
-				options: {
-					translateTime: 'HH:MM:ss Z',
-					ignore: 'pid,hostname',
-				},
-			},
-		},
-	});
+export async function createApp(): Promise<FastifyInstance> {
+  const fastify = Fastify({
+    logger: {
+      level: env.LOG_LEVEL,
+      transport: {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'HH:MM:ss Z',
+          ignore: 'pid,hostname',
+        },
+      },
+    },
+    trustProxy: true,
+  })
 
-	// Register plugins
-	await app.register(cors, {
-		origin: true,
-		methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-		allowedHeaders: ['Content-Type', 'Authorization'],
-		credentials: true,
-	});
+  // Configurar Fastify (plugins, etc.)
+  await configureFastify(fastify)
 
-	// Register Swagger
-	await app.register(swagger, {
-		openapi: {
-			info: {
-				title: 'API Template',
-				description:
-					'API Template with TypeScript, Fastify, MySQL and OpenTelemetry',
-				version: '1.0.0',
-			},
-			servers: [
-				{
-					url: `http://${config.app.host}:${config.app.port}`,
-					description: 'Development server',
-				},
-			],
-			components: {
-				securitySchemes: {
-					bearerAuth: {
-						type: 'http',
-						scheme: 'bearer',
-						bearerFormat: 'JWT',
-					},
-				},
-			},
-		},
-	});
+  // Registrar hooks
+  await errorHandler(fastify)
+  await requestLogger(fastify)
 
-	await app.register(swaggerUi, {
-		routePrefix: '/documentation',
-		uiConfig: {
-			docExpansion: 'list',
-			deepLinking: true,
-		},
-	});
+  // Registrar rotas
+  await registerRoutes(fastify)
 
-	// Register routes
-	await registerRoutes(app);
+  return fastify
+}
 
-	// Error handler
-	app.setErrorHandler((error, request, reply) => {
-		request.log.error(error);
+export async function startServer(): Promise<FastifyInstance> {
+  const app = await createApp()
 
-		// Handle validation errors
-		if (error.validation) {
-			return reply.status(400).send({
-				error: 'Bad Request',
-				message: error.message,
-				details: error.validation,
-			});
-		}
+  try {
+    await app.listen({ port: env.PORT, host: env.HOST })
+    app.log.info(`Server is running on http://${env.HOST}:${env.PORT}`)
+  } catch (err) {
+    app.log.error(err)
+    process.exit(1)
+  }
 
-		// Handle other errors
-		const statusCode = error.statusCode || 500;
-		const errorMessage = error.message || 'Internal Server Error';
-
-		return reply.status(statusCode).send({
-			error: statusCode >= 500 ? 'Internal Server Error' : errorMessage,
-			message:
-				statusCode >= 500 ? 'An unexpected error occurred' : errorMessage,
-		});
-	});
-
-	return app;
+  return app
 }
