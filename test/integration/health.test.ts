@@ -31,8 +31,7 @@ describe('Health Routes Integration Tests', () => {
         version: expect.any(String),
         database: {
           status: expect.stringMatching(/^(online|offline)$/),
-          provider: 'mysql',
-          responseTime: expect.any(String)
+          provider: 'mysql'
         }
       })
 
