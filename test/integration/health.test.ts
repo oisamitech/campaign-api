@@ -29,6 +29,11 @@ describe('Health Routes Integration Tests', () => {
         uptime: expect.any(Number),
         environment: expect.any(String),
         version: expect.any(String),
+        database: {
+          status: expect.stringMatching(/^(online|offline)$/),
+          provider: 'mysql',
+          responseTime: expect.any(String)
+        }
       })
 
       // Validate timestamp format
@@ -39,6 +44,11 @@ describe('Health Routes Integration Tests', () => {
 
       // Validate environment
       expect(['development', 'test', 'production']).toContain(body.environment)
+
+      // Validate database response time format (should be "Xms" or null)
+      if (body.database.responseTime) {
+        expect(body.database.responseTime).toMatch(/^\d+ms$/)
+      }
     })
   })
 
@@ -57,6 +67,8 @@ describe('Health Routes Integration Tests', () => {
         expect(response.statusCode).toBe(200)
         const body = JSON.parse(response.body)
         expect(body.status).toBe('ok')
+        expect(body.database).toBeDefined()
+        expect(body.database.provider).toBe('mysql')
       })
     })
   })
