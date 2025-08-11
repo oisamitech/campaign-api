@@ -1,14 +1,16 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../infra/database/prisma.js'
+import { healthSchema } from '../schemas/health.js'
 
 export async function healthRoutes(fastify: FastifyInstance) {
-  fastify.get('/health', async () => {
+  fastify.get('/health', {
+    schema: healthSchema
+  }, async () => {
     let databaseStatus = 'offline'
     let databaseResponseTime = null
 
     try {
       const startTime = Date.now()
-      // Executa uma query simples para verificar a conexão
       await prisma.$queryRaw`SELECT 1`
       const endTime = Date.now()
       
