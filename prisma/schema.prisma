@@ -1,0 +1,27 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Campaign {
+  id        BigInt   @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  startDate DateTime
+  endDate   DateTime
+  isDefault Boolean  @default(false)
+  minLives  Int
+  maxLives  Int
+  plans     Json     // Array de números
+  value     Int      @db.TinyInt // Porcentagem de 1 a 100
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("campaigns")
+}

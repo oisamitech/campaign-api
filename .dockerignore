@@ -17,4 +17,6 @@ build
 .idea
 *.swp
 *.swo
-*~ 
+*~
+# Não ignorar prisma
+!prisma 

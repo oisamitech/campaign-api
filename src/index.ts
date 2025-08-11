@@ -1,4 +1,5 @@
 import { startServer } from './app.js'
+import { disconnectDatabase } from './infra/database/prisma.js'
 
 let server: any
 
@@ -12,6 +13,12 @@ async function gracefulShutdown(signal: string) {
     } catch (error) {
       console.error('Error closing server:', error)
     }
+  }
+
+  try {
+    await disconnectDatabase()
+  } catch (error) {
+    console.error('Error disconnecting database:', error)
   }
 
   process.exit(0)

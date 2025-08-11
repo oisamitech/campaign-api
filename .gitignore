@@ -56,3 +56,5 @@ otel-data/
 .classpath
 .settings/
 .history/
+
+/generated/prisma

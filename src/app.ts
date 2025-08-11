@@ -34,6 +34,7 @@ export async function createApp(): Promise<FastifyInstance> {
 }
 
 export async function startServer(): Promise<FastifyInstance> {
+  // Conectar ao banco de dados
   const app = await createApp()
 
   try {
