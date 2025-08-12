@@ -1,17 +1,17 @@
 import { PrismaClient } from '@prisma/client'
 import { env } from '../../config/env.js'
 
-const log = {
+const log: Record<string, ('warn' | 'error')[]> = {
   local: ['warn', 'error'],
   development: ['warn', 'error'],
   staging: ['warn', 'error'],
   production: ['warn', 'error'],
-} as const
+}
 
 type NodeEnv = keyof typeof log
 
 export const prisma = new PrismaClient({
-  log: log[env.NODE_ENV as NodeEnv],
+  log: log[env.NODE_ENV as NodeEnv] || log.production,
   transactionOptions: {
     maxWait: 300000,
     timeout: 300000,

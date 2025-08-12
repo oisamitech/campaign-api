@@ -1,37 +1,37 @@
-FROM node:20.12.0
+FROM node:22.5.1-alpine
+
 
 LABEL maintainer="Sami Tech Team <tech@samisaude.com>"
 
 ARG NPM_TOKEN=$NPM_TOKEN
 
+
+# Set the working directory
 WORKDIR /usr/src/app
 
-RUN apt-get update \
-  && apt-get install -y wget gnupg \
-  && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-  && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
-  && apt-get update \
-  && apt-get install -y google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
-  --no-install-recommends \
-  && rm -rf /var/lib/apt/lists/*
+# Copy package files and Prisma schema
+COPY --chown=node:node package*.json .npmrc ./
+COPY --chown=node:node prisma ./prisma/
 
-# Copy package.json and package-lock.json first to leverage Docker cache
-COPY package*.json .npmrc ./
+# Install dependencies and generate Prisma client
+RUN npm ci --omit=dev --ignore-scripts && \
+    npx prisma generate && \
+    npm cache clean --force
 
-# Install package dependencies
-RUN npm install
-
-# Copy the rest of your app's source code from your host to your image filesystem.
+# Copy the rest of your app's source code
 COPY . .
 
-# ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
-# RUN node node_modules/puppeteer/install.mjs
+# Build the application
+RUN npm run build
 
-# Generate Prisma client
-## if target on development enviroment , doesn't use generate
-RUN npx prisma generate  
+# Chown all the files to the node user
+RUN chown -R node:node /usr/src
 
-# Open the mapped port
+# Switch to 'node' user
+USER node
+
+# Expose port
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+# Start the application
+CMD ["npm", "start"]
