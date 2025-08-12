@@ -132,6 +132,7 @@ docker run --rm \
     --name campaign-api-test \
     --network campaign-test-network \
     -e NODE_ENV=test \
+    -e BEARER_AUTH_KEY=1234567890 \
     -e DATABASE_URL="mysql://root:rootpassword@campaign-mysql-test:3306/campaigns" \
     -e PORT=3000 \
     -e HOST=0.0.0.0 \
@@ -148,6 +149,7 @@ DATABASE_URL=mysql://root:rootpassword@campaign-mysql-test:3306/campaigns
 PORT=3000
 HOST=0.0.0.0
 LOG_LEVEL=error
+BEARER_AUTH_KEY=1234567890
 ENVEOF
         
         # Verificar se o arquivo foi criado

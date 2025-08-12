@@ -147,6 +147,10 @@ export const listCampaignsResponseSchema = {
 export const errorResponseSchema = {
   type: 'object',
   properties: {
+    statusCode: {
+      type: 'number',
+      description: 'HTTP status code'
+    },
     success: {
       type: 'boolean',
       description: 'Whether the operation was successful',
@@ -160,7 +164,7 @@ export const errorResponseSchema = {
       description: 'Descriptive error message',
     },
   },
-  required: ['success', 'error', 'message'],
+  required: ['statusCode', 'success', 'error', 'message'],
   additionalProperties: false,
 }
 
@@ -168,11 +172,20 @@ export const listCampaignsSchema: FastifySchema = {
   description: 'List all campaigns with pagination support',
   tags: ['Campaigns'],
   summary: 'List campaigns',
+  security: [
+    {
+      bearerAuth: []
+    }
+  ],
   querystring: listCampaignsQuerySchema,
   response: {
     200: {
       description: 'Campaigns list returned successfully',
       ...listCampaignsResponseSchema,
+    },
+    401: {
+      description: 'Unauthorized - Bearer token required or invalid',
+      ...errorResponseSchema,
     },
     500: {
       description: 'Internal server error',
