@@ -1,40 +1,39 @@
 version: '3.8'
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: campaign-mysql
+  # mysql:
+  #   image: mysql:8.0
+  #   container_name: campaign-mysql
+  #   restart: unless-stopped
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: rootpassword
+  #     MYSQL_DATABASE: campaigns
+  #   ports:
+  #     - '3306:3306'
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #   networks:
+  #     - campaign-network
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+  #     timeout: 20s
+  #     retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: campaign-api
     restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: campaigns
     ports:
       - '3306:3306'
     volumes:
-      - mysql_data:/var/lib/mysql
+      - .:/app
+      - /app/node_modules
+    # depends_on:
+    #   - mysql
     networks:
       - campaign-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
-      timeout: 20s
-      retries: 10
-
-  # api:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.local
-  #   container_name: campaign-api
-  #   restart: unless-stopped
-  #   ports:
-  #     - '3000:3000'
-  #   env_file: .env
-  #   volumes:
-  #     - .:/app
-  #     - /app/node_modules
-  #   depends_on:
-  #     - mysql
-  #   networks:
-  #     - campaign-network
 
 volumes:
   mysql_data:
