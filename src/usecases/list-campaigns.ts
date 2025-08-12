@@ -1,4 +1,4 @@
-import { Campaign, PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 
 export interface CampaignResponse {
   id: string
@@ -40,35 +40,37 @@ export interface ListCampaignsUseCase {
 export class ListCampaignsUseCaseImpl implements ListCampaignsUseCase {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async execute(params?: PaginationParams): Promise<PaginatedCampaignsResponse> {
+  async execute(
+    params?: PaginationParams
+  ): Promise<PaginatedCampaignsResponse> {
     try {
       const { page = 1, limit = 10 } = params || {}
-      
+
       const validPage = Math.max(1, page)
       const validLimit = Math.min(Math.max(1, limit), 100)
-      
+
       const offset = (validPage - 1) * validLimit
-      
+
       const [campaigns, totalItems] = await Promise.all([
         this.prisma.campaign.findMany({
           orderBy: {
-            createdAt: 'desc'
+            createdAt: 'desc',
           },
           skip: offset,
-          take: validLimit
+          take: validLimit,
         }),
-        this.prisma.campaign.count()
+        this.prisma.campaign.count(),
       ])
-      
+
       const totalPages = Math.ceil(totalItems / validLimit)
       const hasNextPage = validPage < totalPages
       const hasPreviousPage = validPage > 1
-      
+
       const campaignsData = campaigns.map(campaign => ({
         ...campaign,
-        id: campaign.id.toString()
+        id: campaign.id.toString(),
       }))
-      
+
       return {
         data: campaignsData,
         meta: {
@@ -77,11 +79,13 @@ export class ListCampaignsUseCaseImpl implements ListCampaignsUseCase {
           totalItems,
           itemsPerPage: validLimit,
           hasNextPage,
-          hasPreviousPage
-        }
+          hasPreviousPage,
+        },
       }
     } catch (error) {
-      throw new Error(`Failed to list campaigns: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `Failed to list campaigns: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 }

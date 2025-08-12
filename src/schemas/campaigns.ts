@@ -5,14 +5,15 @@ export const listCampaignsQuerySchema = {
   properties: {
     page: {
       type: 'string',
-      description: 'Page number (must be greater than 0)'
+      description: 'Page number (must be greater than 0)',
     },
     limit: {
       type: 'string',
-      description: 'Number of items per page (must be greater than 0, maximum 100)'
-    }
+      description:
+        'Number of items per page (must be greater than 0, maximum 100)',
+    },
   },
-  additionalProperties: false
+  additionalProperties: false,
 }
 
 export const paginationMetaSchema = {
@@ -20,31 +21,38 @@ export const paginationMetaSchema = {
   properties: {
     currentPage: {
       type: 'number',
-      description: 'Current page'
+      description: 'Current page',
     },
     totalPages: {
       type: 'number',
-      description: 'Total number of pages'
+      description: 'Total number of pages',
     },
     totalItems: {
       type: 'number',
-      description: 'Total number of items'
+      description: 'Total number of items',
     },
     itemsPerPage: {
       type: 'number',
-      description: 'Items per page'
+      description: 'Items per page',
     },
     hasNextPage: {
       type: 'boolean',
-      description: 'Whether there is a next page'
+      description: 'Whether there is a next page',
     },
     hasPreviousPage: {
       type: 'boolean',
-      description: 'Whether there is a previous page'
-    }
+      description: 'Whether there is a previous page',
+    },
   },
-  required: ['currentPage', 'totalPages', 'totalItems', 'itemsPerPage', 'hasNextPage', 'hasPreviousPage'],
-  additionalProperties: false
+  required: [
+    'currentPage',
+    'totalPages',
+    'totalItems',
+    'itemsPerPage',
+    'hasNextPage',
+    'hasPreviousPage',
+  ],
+  additionalProperties: false,
 }
 
 export const campaignSchema = {
@@ -52,58 +60,70 @@ export const campaignSchema = {
   properties: {
     id: {
       type: 'string',
-      description: 'Unique campaign ID'
+      description: 'Unique campaign ID',
     },
     name: {
       type: 'string',
-      description: 'Campaign name'
+      description: 'Campaign name',
     },
     startDate: {
       type: 'string',
       format: 'date-time',
-      description: 'Campaign start date'
+      description: 'Campaign start date',
     },
     endDate: {
       type: 'string',
       format: 'date-time',
-      description: 'Campaign end date'
+      description: 'Campaign end date',
     },
     isDefault: {
       type: 'boolean',
-      description: 'Whether this is the default campaign'
+      description: 'Whether this is the default campaign',
     },
     minLives: {
       type: 'number',
-      description: 'Minimum number of lives'
+      description: 'Minimum number of lives',
     },
     maxLives: {
       type: 'number',
-      description: 'Maximum number of lives'
+      description: 'Maximum number of lives',
     },
     plans: {
       type: 'array',
       items: {
-        type: 'number'
+        type: 'number',
       },
-      description: 'Array of available plans'
+      description: 'Array of available plans',
     },
     value: {
       type: 'number',
-      description: 'Campaign value (percentage from 1 to 100)'
+      description: 'Campaign value (percentage from 1 to 100)',
     },
     createdAt: {
       type: 'string',
       format: 'date-time',
-      description: 'Creation date'
+      description: 'Creation date',
     },
     updatedAt: {
       type: 'string',
       format: 'date-time',
-      description: 'Last update date'
-    }
+      description: 'Last update date',
+    },
   },
-  required: ['id', 'name', 'startDate', 'endDate', 'isDefault', 'minLives', 'maxLives', 'plans', 'value', 'createdAt', 'updatedAt'],
-  additionalProperties: false
+  required: [
+    'id',
+    'name',
+    'startDate',
+    'endDate',
+    'isDefault',
+    'minLives',
+    'maxLives',
+    'plans',
+    'value',
+    'createdAt',
+    'updatedAt',
+  ],
+  additionalProperties: false,
 }
 
 export const listCampaignsResponseSchema = {
@@ -111,17 +131,17 @@ export const listCampaignsResponseSchema = {
   properties: {
     success: {
       type: 'boolean',
-      description: 'Whether the operation was successful'
+      description: 'Whether the operation was successful',
     },
     data: {
       type: 'array',
       items: campaignSchema,
-      description: 'Array of campaigns'
+      description: 'Array of campaigns',
     },
-    meta: paginationMetaSchema
+    meta: paginationMetaSchema,
   },
   required: ['success', 'data', 'meta'],
-  additionalProperties: false
+  additionalProperties: false,
 }
 
 export const errorResponseSchema = {
@@ -129,19 +149,19 @@ export const errorResponseSchema = {
   properties: {
     success: {
       type: 'boolean',
-      description: 'Whether the operation was successful'
+      description: 'Whether the operation was successful',
     },
     error: {
       type: 'string',
-      description: 'Error type'
+      description: 'Error type',
     },
     message: {
       type: 'string',
-      description: 'Descriptive error message'
-    }
+      description: 'Descriptive error message',
+    },
   },
   required: ['success', 'error', 'message'],
-  additionalProperties: false
+  additionalProperties: false,
 }
 
 export const listCampaignsSchema: FastifySchema = {
@@ -152,11 +172,11 @@ export const listCampaignsSchema: FastifySchema = {
   response: {
     200: {
       description: 'Campaigns list returned successfully',
-      ...listCampaignsResponseSchema
+      ...listCampaignsResponseSchema,
     },
     500: {
       description: 'Internal server error',
-      ...errorResponseSchema
-    }
-  }
+      ...errorResponseSchema,
+    },
+  },
 }

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: %CIRCLE_PROJECT_REPONAME%-deploy
+  namespace: default
+spec:
+  replicas: %CONTAINER_REPLICAS%
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: %CIRCLE_PROJECT_REPONAME%
+  template:
+    metadata:
+      labels:
+        app: %CIRCLE_PROJECT_REPONAME%
+    spec:
+      automountServiceAccountToken: false
+      initContainers:
+        - image: gcr.io/%GOOGLE_PROJECT_ID%/%CIRCLE_PROJECT_REPONAME%:$(git log -n 1 --pretty=format:"%H")
+          name: %CIRCLE_PROJECT_REPONAME%-init
+          command: ['sh', '-c', 'npx prisma migrate deploy']
+          envFrom:
+            - configMapRef:
+                name: %CIRCLE_PROJECT_REPONAME%-config
+            - secretRef:
+                name: %CIRCLE_PROJECT_REPONAME%-secret
+      containers:
+        - image: gcr.io/%GOOGLE_PROJECT_ID%/%CIRCLE_PROJECT_REPONAME%:$(git log -n 1 --pretty=format:"%H")
+          name: %CIRCLE_PROJECT_REPONAME%
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+          envFrom:
+            - configMapRef:
+                name: %CIRCLE_PROJECT_REPONAME%-config
+            - secretRef:
+                name: %CIRCLE_PROJECT_REPONAME%-secret
