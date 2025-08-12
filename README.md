@@ -128,9 +128,18 @@ docker run -p 3000:3000 campaign-api
 
 ## 🧪 Testing
 
+### Running Tests
+
 ```bash
-npm run test              # All tests
-npm run test:unit         # Unit tests only
-npm run test:integration  # Integration tests only
-npm run test:coverage     # With coverage report
+# All tests
+npm run test
+
+# Unit tests only
+npm run test:unit
+
+# Integration tests only
+npm run test:integration
+
+# Tests with coverage
+npm run test:coverage
 ```
