@@ -1,9 +1,9 @@
-import { FastifyInstance, FastifyReply } from 'fastify'
+import { FastifyInstance } from 'fastify'
 import { ListCampaignsUseCaseImpl } from '../usecases/list-campaigns.js'
 import { PrismaCampaignRepository, PaginationParams } from '../infra/database/repositories/index.js'
 import { prisma } from '../infra/database/prisma.js'
 import { listCampaignsSchema } from '../schemas/campaigns.js'
-import { ListCampaignsRequest } from '../types/routes.js'
+import { ListCampaignsQuery } from '../types/routes.js'
 
 export async function campaignRoutes(fastify: FastifyInstance) {
   const campaignRepository = new PrismaCampaignRepository(prisma)
@@ -13,10 +13,11 @@ export async function campaignRoutes(fastify: FastifyInstance) {
     '/campaigns',
     {
       schema: listCampaignsSchema,
+      preHandler: [fastify.verifyBearerAuth!]
     },
-    async (request: ListCampaignsRequest, reply: FastifyReply) => {
+    async (request, reply) => {
       try {
-        const { page, limit } = request.query
+        const { page, limit } = request.query as ListCampaignsQuery
 
         const paginationParams: PaginationParams | undefined =
           page || limit
@@ -36,6 +37,7 @@ export async function campaignRoutes(fastify: FastifyInstance) {
         console.error('Error listing campaigns:', error)
 
         return reply.status(500).send({
+          statusCode: 500,
           success: false,
           error: 'Internal server error',
           message: 'Failed to list campaigns',
