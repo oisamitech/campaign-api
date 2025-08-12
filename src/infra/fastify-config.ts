@@ -14,18 +14,18 @@ export async function configureFastify(fastify: FastifyInstance) {
       info: {
         title: 'Campaign API',
         description: 'API for campaign management with pagination support',
-        version: '1.0.0'
+        version: '1.0.0',
       },
       servers: [
         {
           url: 'http://localhost:3000',
-          description: 'Development server'
-        }
-      ]
-    }
+          description: 'Development server',
+        },
+      ],
+    },
   })
 
   await fastify.register(swaggerUi, {
-    routePrefix: '/documentation'
+    routePrefix: '/documentation',
   })
 }

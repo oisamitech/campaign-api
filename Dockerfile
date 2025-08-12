@@ -1,49 +1,37 @@
-# Build stage
-FROM node:22-alpine AS builder
+FROM node:20.12.0
 
-WORKDIR /app
+LABEL maintainer="Sami Tech Team <tech@samisaude.com>"
 
-# Copy package files
-COPY package*.json ./
+ARG NPM_TOKEN=$NPM_TOKEN
 
-# Install dependencies
-RUN npm ci
+WORKDIR /usr/src/app
 
-# Copy source code
+RUN apt-get update \
+  && apt-get install -y wget gnupg \
+  && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+  && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+  && apt-get update \
+  && apt-get install -y google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+  --no-install-recommends \
+  && rm -rf /var/lib/apt/lists/*
+
+# Copy package.json and package-lock.json first to leverage Docker cache
+COPY package*.json .npmrc ./
+
+# Install package dependencies
+RUN npm install
+
+# Copy the rest of your app's source code from your host to your image filesystem.
 COPY . .
 
+# ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
+# RUN node node_modules/puppeteer/install.mjs
+
 # Generate Prisma client
-RUN npx prisma generate
+## if target on development enviroment , doesn't use generate
+RUN npx prisma generate  
 
-# Build the application
-RUN npm run build
-
-# Production stage
-FROM node:22-alpine AS production
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install only production dependencies
-RUN npm ci --only=production
-
-# Copy built application
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/prisma ./prisma
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-
-# Change ownership of the app directory
-RUN chown -R nextjs:nodejs /app
-USER nextjs
-
-# Expose port
+# Open the mapped port
 EXPOSE 3000
 
-# Start the application
-CMD ["npm", "start"]
+CMD ["npm", "run", "start"]

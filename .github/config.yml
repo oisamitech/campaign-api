@@ -1,0 +1,231 @@
+global-variables: &global-variables
+  USE_GKE_GCLOUD_AUTH_PLUGIN: True
+  GIT_REVISION: << pipeline.git.revision >>
+  GIT_BASE_REVISION: << pipeline.git.base_revision >>
+
+machine: &machine
+  machine:
+    image: ubuntu-2004:2022.10.1
+    docker_layer_caching: true
+
+global-definitions:
+  - run: &install-gcloud-cli
+      name: Install GCloud CLI, if not available
+      command: |
+        install () {
+          # Set sudo to work whether logged in as root user or non-root user
+          if [[ $EUID == 0 ]]; then export SUDO=""; else export SUDO="sudo"; fi
+          cd ~/
+          curl -s https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-${GCLOUD_CLI_VERSION}-linux-x86_64.tar.gz | tar xz
+          echo 'source ~/google-cloud-sdk/path.bash.inc' >> $BASH_ENV
+        }
+
+        if grep 'docker\|lxc' /proc/1/cgroup > /dev/null 2>&1; then
+          if [[ $(command -v gcloud) == "" ]]; then
+            install
+          else
+            echo "gcloud CLI is already installed."
+          fi
+        else
+          echo "----------------------------------------------------------------------------------------------------"
+          echo "this is a machine executor job, replacing default installation of gcloud CLI"
+          echo "----------------------------------------------------------------------------------------------------"
+          sudo rm -rf /opt/google-cloud-sdk
+          install
+        fi
+  - run: &configure-gcloud-cli
+      name: Initialize gcloud CLI to connect to Google Cloud
+      command: |
+        # Store service account
+        echo $GCLOUD_SERVICE_KEY > ${HOME}/gcloud-service-key.json
+
+        # Initialize gcloud CLI
+        gcloud auth activate-service-account --key-file=${HOME}/gcloud-service-key.json
+        gcloud --quiet config set project $GOOGLE_PROJECT_ID
+        gcloud --quiet config set compute/zone $GOOGLE_COMPUTE_ZONE
+  - run: &configure-docker
+      name: gcloud cli configure docker
+      command: |
+        # Set sudo to work whether logged in as root user or non-root user
+        if [[ $EUID == 0 ]]; then export SUDO=""; else export SUDO="sudo"; fi
+
+        # configure Docker to use gcloud as a credential helper
+        mkdir -p "$HOME/.docker"
+        gcloud auth configure-docker --quiet gcr.io
+
+        # if applicable, provide user access to the docker config file
+        if [[ -d "$HOME/.docker" ]]; then
+          $SUDO chown "$USER:$USER" "$HOME/.docker" -R
+        fi
+        if [[ -d "$HOME/.config" ]]; then
+          $SUDO chown "$USER:$USER" "$HOME/.config" -R
+        fi
+  - run: &install-kubectl
+      name: Install Kubectl
+      command: |
+        if [[ latest == "latest" ]]; then
+          # get latest kubectl release
+          KUBECTL_VERSION=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)
+        else
+          KUBECTL_VERSION=latest
+        fi
+
+        # download kubectl
+        curl -LO https://storage.googleapis.com/kubernetes-release/release/$KUBECTL_VERSION/bin/linux/amd64/kubectl
+
+        sudo chmod +x ./kubectl || chmod +x ./kubectl
+
+        sudo mv ./kubectl /usr/local/bin || mv ./kubectl /usr/local/bin
+
+build: &build
+  steps:
+    - checkout
+    - run:
+        name: 'Replace version on package.json'
+        command: |
+          git fetch --all --tags
+          [ -z "$(git describe --tags --abbrev=0)" ] && echo "Tag not exists. Aborting." || sed -i -E 's/"version": "[0-9]*\.[0-9]*\.[0-9]*"/"version": "'$(git describe --tags --abbrev=0)'"/g' package.json
+    - run: *install-gcloud-cli
+    - run: *configure-gcloud-cli
+    - run: *configure-docker
+    - run:
+        name: Create credentials folder to store service account
+        command: |
+          mkdir credentials
+    - run:
+        name: Get service account from Secrets Manager and store on credentials folder
+        command: |
+          gcloud secrets versions access latest --secret="${CIRCLE_PROJECT_REPONAME}"-service-account > ${PWD}/credentials/key.json
+          gcloud secrets versions access latest --secret="${CIRCLE_PROJECT_REPONAME}"-default-signer > ${PWD}/credentials/default-signer.rsa
+    - run:
+        name: Build Docker image for GCR
+        command: |
+          docker build . --build-arg NPM_TOKEN=${NPM_TOKEN} -t gcr.io/${GOOGLE_PROJECT_ID}/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1}
+    - run:
+        name: Push image to GCR
+        command: |
+          docker push gcr.io/${GOOGLE_PROJECT_ID}/${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1}
+
+deploy: &deploy
+  steps:
+    - checkout
+    - run: *install-gcloud-cli
+    - run: *install-kubectl
+    - run: *configure-gcloud-cli
+    - run:
+        name: Install google-cloud-sdk-gke-gcloud-auth-plugin
+        command: |
+          gcloud components install gke-gcloud-auth-plugin --quiet
+    - run:
+        name: Install yq CLI
+        command: |
+          sudo wget https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
+    - run:
+        name: Install jq CLI
+        command: |
+          sudo apt-get install jq
+    - run:
+        name: Install kubeconform CLI
+        command: |
+          sudo wget https://github.com/yannh/kubeconform/releases/download/v0.5.0/kubeconform-linux-amd64.tar.gz && sudo tar xf kubeconform-linux-amd64.tar.gz && sudo cp kubeconform /usr/local/bin/kubeconform
+    - run:
+        name: Add a newline at the end of a file only if it doesn't exist
+        command: |
+          [ -n "$(tail -c1 ${PWD}/.k8s/${CI_ENVIRONMENT}/configmap.yaml)" ] && echo >> ${PWD}/.k8s/${CI_ENVIRONMENT}/configmap.yaml || echo "There is already a blank line at the end of the file configmap.yaml"
+          [ -n "$(tail -c1 ${PWD}/.k8s/${CI_ENVIRONMENT}/secret.yaml)" ] && echo >> ${PWD}/.k8s/${CI_ENVIRONMENT}/secret.yaml || echo "There is already a blank line at the end of the file secret.yaml"
+    - run:
+        name: Get config and secrets from secrets manager
+        command: |
+          gcloud secrets versions access latest --secret="${CIRCLE_PROJECT_REPONAME}"-config | yq eval --prettyPrint | sed 's/^/  /' >> ${PWD}/.k8s/${CI_ENVIRONMENT}/configmap.yaml
+          gcloud secrets versions access latest --secret="${CIRCLE_PROJECT_REPONAME}"-secret | jq '.[] |= @base64' | yq eval --prettyPrint | sed 's/^/  /' >> ${PWD}/.k8s/${CI_ENVIRONMENT}/secret.yaml
+    - run:
+        name: Replace variables in yaml files
+        command: |
+          cd .k8s
+          chmod +x sed.sh
+          ./sed.sh
+    - run:
+        name: Check if yaml files is valid
+        command: |
+          kubeconform ${PWD}/.k8s/${CI_ENVIRONMENT}/*.yaml
+
+          if (( "$(yq '.data | length' ${PWD}/.k8s/${CI_ENVIRONMENT}/configmap.yaml)" == 0 )); then
+            echo "Check your config.yaml file as it contains errors"
+            exit 1
+          fi
+
+          if (( "$(yq '.data | length' ${PWD}/.k8s/${CI_ENVIRONMENT}/secret.yaml)" == 0 )); then
+            echo "Check your secret.yaml file as it contains errors"
+            exit 1
+          fi
+    - run:
+        name: Get cluster credentials
+        command: |
+          gcloud container clusters get-credentials "${CLUSTER_NAME}"
+    - run:
+        name: Apply yaml files on current k8s context
+        command: |
+          cd .k8s
+          chmod +x deploy.sh
+          ./deploy.sh
+
+version: 2.1
+jobs:
+  Build-Push-Image-Docker-Dev:
+    description: Build and push image to Google Container Registry
+    <<: *machine
+    <<: *build
+
+  Build-Push-Image-Docker-Prod:
+    description: Build and push image to Google Container Registry
+    <<: *machine
+    <<: *build
+
+  deploy-dev:
+    description: Deploy application to Google Kubernetes Engine
+    <<: *machine
+    environment:
+      CONTAINER_REPLICAS: 2
+      <<: *global-variables
+    <<: *deploy
+
+  deploy-prod:
+    description: Deploy application to Google Kubernetes Engine
+    <<: *machine
+    environment:
+      CONTAINER_REPLICAS: 3
+      <<: *global-variables
+    <<: *deploy
+
+workflows:
+  build_update_deploy:
+    jobs:
+      - Build-Push-Image-Docker-Dev:
+          context: development
+          filters:
+            branches:
+              only:
+                - development
+
+      - Build-Push-Image-Docker-Prod:
+          context: production
+          filters:
+            branches:
+              only:
+                - main
+
+      - deploy-dev:
+          context: development
+          filters:
+            branches:
+              only: development
+          requires:
+            - Build-Push-Image-Docker-Dev
+
+      - deploy-prod:
+          context: production
+          filters:
+            branches:
+              only: main
+          requires:
+            - Build-Push-Image-Docker-Prod
