@@ -1,14 +1,13 @@
 import { FastifyInstance, FastifyReply } from 'fastify'
-import {
-  ListCampaignsUseCaseImpl,
-  PaginationParams,
-} from '../usecases/list-campaigns.js'
+import { ListCampaignsUseCaseImpl } from '../usecases/list-campaigns.js'
+import { PrismaCampaignRepository, PaginationParams } from '../infra/database/repositories/index.js'
 import { prisma } from '../infra/database/prisma.js'
 import { listCampaignsSchema } from '../schemas/campaigns.js'
 import { ListCampaignsRequest } from '../types/routes.js'
 
 export async function campaignRoutes(fastify: FastifyInstance) {
-  const listCampaignsUseCase = new ListCampaignsUseCaseImpl(prisma)
+  const campaignRepository = new PrismaCampaignRepository(prisma)
+  const listCampaignsUseCase = new ListCampaignsUseCaseImpl(campaignRepository)
 
   fastify.get(
     '/campaigns',
