@@ -1,4 +1,7 @@
-import { PrismaClient } from '@prisma/client'
+import { CampaignRepository, PaginationParams } from '../infra/database/repositories/index.js'
+
+
+export { PaginationParams }
 
 export interface CampaignResponse {
   id: string
@@ -12,11 +15,6 @@ export interface CampaignResponse {
   value: number
   createdAt: Date
   updatedAt: Date
-}
-
-export interface PaginationParams {
-  page: number
-  limit: number
 }
 
 export interface PaginationMeta {
@@ -38,7 +36,7 @@ export interface ListCampaignsUseCase {
 }
 
 export class ListCampaignsUseCaseImpl implements ListCampaignsUseCase {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly campaignRepository: CampaignRepository) {}
 
   async execute(
     params?: PaginationParams
@@ -49,17 +47,12 @@ export class ListCampaignsUseCaseImpl implements ListCampaignsUseCase {
       const validPage = Math.max(1, page)
       const validLimit = Math.min(Math.max(1, limit), 100)
 
-      const offset = (validPage - 1) * validLimit
-
       const [campaigns, totalItems] = await Promise.all([
-        this.prisma.campaign.findMany({
-          orderBy: {
-            createdAt: 'desc',
-          },
-          skip: offset,
-          take: validLimit,
+        this.campaignRepository.findManyPaginated({
+          page: validPage,
+          limit: validLimit,
         }),
-        this.prisma.campaign.count(),
+        this.campaignRepository.count(),
       ])
 
       const totalPages = Math.ceil(totalItems / validLimit)
