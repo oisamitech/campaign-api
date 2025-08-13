@@ -1,4 +1,7 @@
-import { CampaignRepository, CreateCampaignParams } from '../infra/database/repositories/index.js'
+import {
+  CampaignRepository,
+  CreateCampaignParams,
+} from '../infra/database/repositories/index.js'
 
 export interface CreateCampaignRequest {
   name: string
@@ -32,7 +35,9 @@ export interface CreateCampaignUseCase {
 export class CreateCampaignUseCaseImpl implements CreateCampaignUseCase {
   constructor(private readonly campaignRepository: CampaignRepository) {}
 
-  async execute(request: CreateCampaignRequest): Promise<CreateCampaignResponse> {
+  async execute(
+    request: CreateCampaignRequest
+  ): Promise<CreateCampaignResponse> {
     try {
       // Validar datas
       const startDate = new Date(request.startDate)
@@ -107,11 +112,10 @@ export class CreateCampaignUseCaseImpl implements CreateCampaignUseCase {
       if (error instanceof Error) {
         throw error
       }
-      
+
       throw new Error(
         `Failed to create campaign: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     }
   }
 }
-

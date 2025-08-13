@@ -149,7 +149,7 @@ export const errorResponseSchema = {
   properties: {
     statusCode: {
       type: 'number',
-      description: 'HTTP status code'
+      description: 'HTTP status code',
     },
     success: {
       type: 'boolean',
@@ -189,7 +189,8 @@ export const createCampaignBodySchema = {
     },
     isDefault: {
       type: 'boolean',
-      description: 'Whether this is the default campaign (optional, defaults to false)',
+      description:
+        'Whether this is the default campaign (optional, defaults to false)',
       default: false,
     },
     minLives: {
@@ -249,8 +250,8 @@ export const listCampaignsSchema: FastifySchema = {
   summary: 'List campaigns',
   security: [
     {
-      bearerAuth: []
-    }
+      bearerAuth: [],
+    },
   ],
   querystring: listCampaignsQuerySchema,
   response: {
@@ -275,8 +276,8 @@ export const createCampaignSchema: FastifySchema = {
   summary: 'Create campaign',
   security: [
     {
-      bearerAuth: []
-    }
+      bearerAuth: [],
+    },
   ],
   body: createCampaignBodySchema,
   response: {

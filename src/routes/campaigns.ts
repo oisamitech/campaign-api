@@ -1,20 +1,31 @@
 import { FastifyInstance } from 'fastify'
-import { ListCampaignsUseCaseImpl, CreateCampaignUseCaseImpl } from '../usecases/index.js'
-import { PrismaCampaignRepository, PaginationParams } from '../infra/database/repositories/index.js'
+import {
+  ListCampaignsUseCaseImpl,
+  CreateCampaignUseCaseImpl,
+} from '../usecases/index.js'
+import {
+  PrismaCampaignRepository,
+  PaginationParams,
+} from '../infra/database/repositories/index.js'
 import { prisma } from '../infra/database/prisma.js'
-import { listCampaignsSchema, createCampaignSchema } from '../schemas/campaigns.js'
+import {
+  listCampaignsSchema,
+  createCampaignSchema,
+} from '../schemas/campaigns.js'
 import { ListCampaignsQuery, CreateCampaignBody } from '../types/routes.js'
 
 export async function campaignRoutes(fastify: FastifyInstance) {
   const campaignRepository = new PrismaCampaignRepository(prisma)
   const listCampaignsUseCase = new ListCampaignsUseCaseImpl(campaignRepository)
-  const createCampaignUseCase = new CreateCampaignUseCaseImpl(campaignRepository)
+  const createCampaignUseCase = new CreateCampaignUseCaseImpl(
+    campaignRepository
+  )
 
   fastify.get(
     '/campaigns',
     {
       schema: listCampaignsSchema,
-      preHandler: [fastify.verifyBearerAuth!]
+      preHandler: [fastify.verifyBearerAuth!],
     },
     async (request, reply) => {
       try {
@@ -51,7 +62,7 @@ export async function campaignRoutes(fastify: FastifyInstance) {
     '/campaigns',
     {
       schema: createCampaignSchema,
-      preHandler: [fastify.verifyBearerAuth!]
+      preHandler: [fastify.verifyBearerAuth!],
     },
     async (request, reply) => {
       try {
@@ -67,12 +78,13 @@ export async function campaignRoutes(fastify: FastifyInstance) {
         console.error('Error creating campaign:', error)
 
         // Se for um erro de validação do use case, retornar 400
-        if (error instanceof Error && (
-          error.message.includes('Invalid') ||
-          error.message.includes('required') ||
-          error.message.includes('must be') ||
-          error.message.includes('cannot be')
-        )) {
+        if (
+          error instanceof Error &&
+          (error.message.includes('Invalid') ||
+            error.message.includes('required') ||
+            error.message.includes('must be') ||
+            error.message.includes('cannot be'))
+        ) {
           return reply.status(400).send({
             statusCode: 400,
             success: false,

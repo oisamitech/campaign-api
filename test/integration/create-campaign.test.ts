@@ -7,13 +7,13 @@ import { env } from '../../src/config/env.js'
 describe('Create Campaign Integration Tests', () => {
   let app: FastifyInstance
   let prisma: PrismaClient
-  
+
   // Helper function para criar headers de autorização
   const getAuthHeaders = () => {
     const authKey = env.BEARER_AUTH_KEY?.split(',')[0] || 'test-token'
     return {
       authorization: `Bearer ${authKey}`,
-      'content-type': 'application/json'
+      'content-type': 'application/json',
     }
   }
 
@@ -25,20 +25,22 @@ describe('Create Campaign Integration Tests', () => {
     minLives: 5,
     maxLives: 20,
     plans: [1, 2, 3],
-    value: 15
+    value: 15,
   })
 
   beforeAll(async () => {
     // Criar aplicação Fastify
     app = await createApp()
-    
+
     // Conectar ao banco MySQL do docker-compose
     prisma = new PrismaClient({
       datasources: {
         db: {
-          url: process.env.DATABASE_URL || 'mysql://campaign_user:campaign_password@localhost:3306/campaigns'
-        }
-      }
+          url:
+            process.env.DATABASE_URL ||
+            'mysql://campaign_user:campaign_password@localhost:3306/campaigns',
+        },
+      },
     })
 
     // Aguardar conexão
@@ -54,11 +56,11 @@ describe('Create Campaign Integration Tests', () => {
   afterAll(async () => {
     // Limpar dados de teste
     await prisma.campaign.deleteMany()
-  
+
     // Desconectar
     await prisma.$disconnect()
     console.log('✅ Desconectado do banco MySQL')
-    
+
     // Fechar aplicação
     await app.close()
     console.log('✅ Aplicação Fastify fechada')
@@ -72,11 +74,11 @@ describe('Create Campaign Integration Tests', () => {
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(201)
-      
+
       const body = JSON.parse(response.body)
       expect(body.success).toBe(true)
       expect(body.data).toBeDefined()
@@ -92,7 +94,7 @@ describe('Create Campaign Integration Tests', () => {
 
       // Verificar se foi realmente criado no banco
       const createdCampaign = await prisma.campaign.findFirst({
-        where: { name: payload.name }
+        where: { name: payload.name },
       })
       expect(createdCampaign).toBeDefined()
       expect(createdCampaign?.name).toBe(payload.name)
@@ -102,18 +104,18 @@ describe('Create Campaign Integration Tests', () => {
       const payload = {
         ...getValidCampaignPayload(),
         isDefault: true,
-        name: 'Default Campaign Test'
+        name: 'Default Campaign Test',
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(201)
-      
+
       const body = JSON.parse(response.body)
       expect(body.success).toBe(true)
       expect(body.data.isDefault).toBe(true)
@@ -127,18 +129,18 @@ describe('Create Campaign Integration Tests', () => {
         minLives: 1,
         maxLives: 1,
         plans: [1],
-        value: 1
+        value: 1,
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(201)
-      
+
       const body = JSON.parse(response.body)
       expect(body.success).toBe(true)
       expect(body.data.name).toBe(payload.name)
@@ -153,18 +155,18 @@ describe('Create Campaign Integration Tests', () => {
         minLives: 1,
         maxLives: 1000,
         plans: [1, 2, 3, 4, 5, 10, 15, 20, 25, 30],
-        value: 100
+        value: 100,
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(201)
-      
+
       const body = JSON.parse(response.body)
       expect(body.success).toBe(true)
       expect(body.data.value).toBe(100)
@@ -176,7 +178,7 @@ describe('Create Campaign Integration Tests', () => {
     it('should return 400 when name is missing', async () => {
       const payload = {
         ...getValidCampaignPayload(),
-        name: undefined
+        name: undefined,
       }
       delete payload.name
 
@@ -184,7 +186,7 @@ describe('Create Campaign Integration Tests', () => {
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(400)
@@ -193,14 +195,14 @@ describe('Create Campaign Integration Tests', () => {
     it('should return 400 when name is empty string', async () => {
       const payload = {
         ...getValidCampaignPayload(),
-        name: ''
+        name: '',
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(400)
@@ -209,14 +211,14 @@ describe('Create Campaign Integration Tests', () => {
     it('should return 400 when name is too long', async () => {
       const payload = {
         ...getValidCampaignPayload(),
-        name: 'A'.repeat(256) // 256 caracteres, maior que o limite de 255
+        name: 'A'.repeat(256), // 256 caracteres, maior que o limite de 255
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(400)
@@ -225,14 +227,14 @@ describe('Create Campaign Integration Tests', () => {
     it('should return 400 when startDate is invalid', async () => {
       const payload = {
         ...getValidCampaignPayload(),
-        startDate: 'invalid-date'
+        startDate: 'invalid-date',
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(400)
@@ -242,18 +244,18 @@ describe('Create Campaign Integration Tests', () => {
       const payload = {
         ...getValidCampaignPayload(),
         startDate: '2024-12-31T00:00:00.000Z',
-        endDate: '2024-01-01T00:00:00.000Z'
+        endDate: '2024-01-01T00:00:00.000Z',
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(400)
-      
+
       const body = JSON.parse(response.body)
       expect(body.success).toBe(false)
       expect(body.message).toContain('before')
@@ -262,14 +264,14 @@ describe('Create Campaign Integration Tests', () => {
     it('should return 400 when minLives is zero or negative', async () => {
       const payload = {
         ...getValidCampaignPayload(),
-        minLives: 0
+        minLives: 0,
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(400)
@@ -279,18 +281,18 @@ describe('Create Campaign Integration Tests', () => {
       const payload = {
         ...getValidCampaignPayload(),
         minLives: 10,
-        maxLives: 5
+        maxLives: 5,
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(400)
-      
+
       const body = JSON.parse(response.body)
       expect(body.success).toBe(false)
       expect(body.message).toContain('greater than maximum')
@@ -299,28 +301,28 @@ describe('Create Campaign Integration Tests', () => {
     it('should return 400 when value is out of range', async () => {
       const payloadTooLow = {
         ...getValidCampaignPayload(),
-        value: 0
+        value: 0,
       }
 
       const response1 = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload: payloadTooLow
+        payload: payloadTooLow,
       })
 
       expect(response1.statusCode).toBe(400)
 
       const payloadTooHigh = {
         ...getValidCampaignPayload(),
-        value: 101
+        value: 101,
       }
 
       const response2 = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload: payloadTooHigh
+        payload: payloadTooHigh,
       })
 
       expect(response2.statusCode).toBe(400)
@@ -329,14 +331,14 @@ describe('Create Campaign Integration Tests', () => {
     it('should return 400 when plans array is empty', async () => {
       const payload = {
         ...getValidCampaignPayload(),
-        plans: []
+        plans: [],
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(400)
@@ -345,14 +347,14 @@ describe('Create Campaign Integration Tests', () => {
     it('should return 400 when plans contains invalid values', async () => {
       const payload = {
         ...getValidCampaignPayload(),
-        plans: [1, 0, -1]
+        plans: [1, 0, -1],
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(400)
@@ -367,9 +369,9 @@ describe('Create Campaign Integration Tests', () => {
         method: 'POST',
         url: '/api/campaigns',
         headers: {
-          'content-type': 'application/json'
+          'content-type': 'application/json',
         },
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(401)
@@ -385,9 +387,9 @@ describe('Create Campaign Integration Tests', () => {
         url: '/api/campaigns',
         headers: {
           authorization: 'Bearer invalid-token',
-          'content-type': 'application/json'
+          'content-type': 'application/json',
         },
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(401)
@@ -405,9 +407,9 @@ describe('Create Campaign Integration Tests', () => {
         url: '/api/campaigns',
         headers: {
           authorization: getAuthHeaders().authorization,
-          'content-type': 'text/plain'
+          'content-type': 'text/plain',
         },
-        payload: JSON.stringify(payload)
+        payload: JSON.stringify(payload),
       })
 
       // Pode retornar 400 ou 415 dependendo da configuração do Fastify
@@ -419,17 +421,17 @@ describe('Create Campaign Integration Tests', () => {
     it('should handle concurrent campaign creation requests', async () => {
       const payload1 = {
         ...getValidCampaignPayload(),
-        name: 'Concurrent Campaign 1'
+        name: 'Concurrent Campaign 1',
       }
 
       const payload2 = {
         ...getValidCampaignPayload(),
-        name: 'Concurrent Campaign 2'
+        name: 'Concurrent Campaign 2',
       }
 
       const payload3 = {
         ...getValidCampaignPayload(),
-        name: 'Concurrent Campaign 3'
+        name: 'Concurrent Campaign 3',
       }
 
       // Fazer requisições simultâneas
@@ -438,20 +440,20 @@ describe('Create Campaign Integration Tests', () => {
           method: 'POST',
           url: '/api/campaigns',
           headers: getAuthHeaders(),
-          payload: payload1
+          payload: payload1,
         }),
         app.inject({
           method: 'POST',
           url: '/api/campaigns',
           headers: getAuthHeaders(),
-          payload: payload2
+          payload: payload2,
         }),
         app.inject({
           method: 'POST',
           url: '/api/campaigns',
           headers: getAuthHeaders(),
-          payload: payload3
-        })
+          payload: payload3,
+        }),
       ]
 
       const responses = await Promise.all(requests)
@@ -459,7 +461,7 @@ describe('Create Campaign Integration Tests', () => {
       // Todas devem retornar sucesso
       responses.forEach(response => {
         expect(response.statusCode).toBe(201)
-        
+
         const body = JSON.parse(response.body)
         expect(body.success).toBe(true)
         expect(body.data.id).toBeDefined()
@@ -469,9 +471,13 @@ describe('Create Campaign Integration Tests', () => {
       const campaignsInDb = await prisma.campaign.findMany({
         where: {
           name: {
-            in: ['Concurrent Campaign 1', 'Concurrent Campaign 2', 'Concurrent Campaign 3']
-          }
-        }
+            in: [
+              'Concurrent Campaign 1',
+              'Concurrent Campaign 2',
+              'Concurrent Campaign 3',
+            ],
+          },
+        },
       })
 
       expect(campaignsInDb).toHaveLength(3)
@@ -480,18 +486,18 @@ describe('Create Campaign Integration Tests', () => {
     it('should handle special characters in campaign name', async () => {
       const payload = {
         ...getValidCampaignPayload(),
-        name: 'Campaign with Special Chars: àáâãäçéêëíîïóôõöúûüý @#$%&*()[]{}!?'
+        name: 'Campaign with Special Chars: àáâãäçéêëíîïóôõöúûüý @#$%&*()[]{}!?',
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(201)
-      
+
       const body = JSON.parse(response.body)
       expect(body.success).toBe(true)
       expect(body.data.name).toBe(payload.name)
@@ -499,22 +505,22 @@ describe('Create Campaign Integration Tests', () => {
 
     it('should handle large plans array', async () => {
       const largePlansArray = Array.from({ length: 100 }, (_, i) => i + 1)
-      
+
       const payload = {
         ...getValidCampaignPayload(),
         name: 'Campaign with Large Plans Array',
-        plans: largePlansArray
+        plans: largePlansArray,
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(201)
-      
+
       const body = JSON.parse(response.body)
       expect(body.success).toBe(true)
       expect(body.data.plans).toEqual(largePlansArray)
@@ -523,18 +529,18 @@ describe('Create Campaign Integration Tests', () => {
     it('should trim whitespace from campaign name', async () => {
       const payload = {
         ...getValidCampaignPayload(),
-        name: '   Campaign with Whitespace   '
+        name: '   Campaign with Whitespace   ',
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(201)
-      
+
       const body = JSON.parse(response.body)
       expect(body.success).toBe(true)
       expect(body.data.name).toBe('Campaign with Whitespace')
@@ -547,18 +553,18 @@ describe('Create Campaign Integration Tests', () => {
       const payload = {
         ...getValidCampaignPayload(),
         startDate: sameDate,
-        endDate: sameDate
+        endDate: sameDate,
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(400)
-      
+
       const body = JSON.parse(response.body)
       expect(body.success).toBe(false)
       expect(body.message).toContain('before')
@@ -569,18 +575,18 @@ describe('Create Campaign Integration Tests', () => {
         ...getValidCampaignPayload(),
         name: 'Long Duration Campaign',
         startDate: '2024-01-01T00:00:00.000Z',
-        endDate: '2030-12-31T23:59:59.000Z'
+        endDate: '2030-12-31T23:59:59.000Z',
       }
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/campaigns',
         headers: getAuthHeaders(),
-        payload
+        payload,
       })
 
       expect(response.statusCode).toBe(201)
-      
+
       const body = JSON.parse(response.body)
       expect(body.success).toBe(true)
     })

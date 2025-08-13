@@ -1,5 +1,3 @@
-import { FastifySchema } from 'fastify'
-
 // Schema comum para respostas de erro de autenticação
 export const unauthorizedResponseSchema = {
   type: 'object',
@@ -7,23 +5,23 @@ export const unauthorizedResponseSchema = {
     statusCode: {
       type: 'number',
       description: 'HTTP status code',
-      example: 401
+      example: 401,
     },
     success: {
       type: 'boolean',
       description: 'Whether the operation was successful',
-      example: false
+      example: false,
     },
     error: {
       type: 'string',
       description: 'Error type',
-      example: 'Unauthorized'
+      example: 'Unauthorized',
     },
     message: {
       type: 'string',
       description: 'Descriptive error message',
-      example: 'Authentication required'
-    }
+      example: 'Authentication required',
+    },
   },
   required: ['statusCode', 'success', 'error', 'message'],
   additionalProperties: false,
@@ -36,29 +34,29 @@ export const validationErrorResponseSchema = {
     statusCode: {
       type: 'number',
       description: 'HTTP status code',
-      example: 400
+      example: 400,
     },
     success: {
       type: 'boolean',
       description: 'Whether the operation was successful',
-      example: false
+      example: false,
     },
     error: {
       type: 'string',
       description: 'Error type',
-      example: 'Validation Error'
+      example: 'Validation Error',
     },
     message: {
       type: 'string',
-      description: 'Descriptive error message'
+      description: 'Descriptive error message',
     },
     details: {
       type: 'array',
       description: 'Validation error details',
       items: {
-        type: 'object'
-      }
-    }
+        type: 'object',
+      },
+    },
   },
   required: ['statusCode', 'success', 'error', 'message'],
   additionalProperties: false,
@@ -71,22 +69,22 @@ export const internalErrorResponseSchema = {
     statusCode: {
       type: 'number',
       description: 'HTTP status code',
-      example: 500
+      example: 500,
     },
     success: {
       type: 'boolean',
       description: 'Whether the operation was successful',
-      example: false
+      example: false,
     },
     error: {
       type: 'string',
       description: 'Error type',
-      example: 'Internal Server Error'
+      example: 'Internal Server Error',
     },
     message: {
       type: 'string',
-      description: 'Descriptive error message'
-    }
+      description: 'Descriptive error message',
+    },
   },
   required: ['statusCode', 'success', 'error', 'message'],
   additionalProperties: false,
@@ -99,8 +97,8 @@ export const successResponseSchema = {
     success: {
       type: 'boolean',
       description: 'Whether the operation was successful',
-      example: true
-    }
+      example: true,
+    },
   },
   required: ['success'],
   additionalProperties: true,

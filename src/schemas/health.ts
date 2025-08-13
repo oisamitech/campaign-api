@@ -77,17 +77,17 @@ export const healthSchema: FastifySchema = {
         statusCode: {
           type: 'number',
           description: 'HTTP status code',
-          example: 500
+          example: 500,
         },
         success: {
           type: 'boolean',
           description: 'Whether the operation was successful',
-          example: false
+          example: false,
         },
         error: {
           type: 'string',
           description: 'Error type',
-          example: 'Internal Server Error'
+          example: 'Internal Server Error',
         },
         message: {
           type: 'string',

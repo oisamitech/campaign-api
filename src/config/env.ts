@@ -3,7 +3,7 @@ import path from 'path'
 
 const nodeEnv = process.env.NODE_ENV || 'development'
 
-if (nodeEnv === 'test') { 
+if (nodeEnv === 'test') {
   console.log('carregando .env.test')
   config({ path: path.resolve(process.cwd(), '.env.test') })
 } else {
