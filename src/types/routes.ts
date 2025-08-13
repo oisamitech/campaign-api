@@ -5,6 +5,17 @@ export interface ListCampaignsQuery {
   limit?: string
 }
 
+export interface CreateCampaignBody {
+  name: string
+  startDate: string
+  endDate: string
+  isDefault?: boolean
+  minLives: number
+  maxLives: number
+  plans: number[]
+  value: number
+}
+
 export interface ApiResponse<T = any> {
   success: boolean
   data?: T
@@ -15,6 +26,10 @@ export interface ApiResponse<T = any> {
 
 export type ListCampaignsRequest = FastifyRequest<{
   Querystring: ListCampaignsQuery
+}>
+
+export type CreateCampaignRequest = FastifyRequest<{
+  Body: CreateCampaignBody
 }>
 
 export interface PaginationQuery {
