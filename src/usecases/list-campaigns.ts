@@ -1,5 +1,7 @@
-import { CampaignRepository, PaginationParams } from '../infra/database/repositories/index.js'
-
+import {
+  CampaignRepository,
+  PaginationParams,
+} from '../infra/database/repositories/index.js'
 
 export { PaginationParams }
 

@@ -11,7 +11,7 @@ export async function errorHandler(fastify: FastifyInstance) {
           statusCode: 401,
           success: false,
           error: 'Unauthorized',
-          message: error.message || 'Authentication required'
+          message: error.message || 'Authentication required',
         })
       }
 
@@ -30,7 +30,7 @@ export async function errorHandler(fastify: FastifyInstance) {
           statusCode: (error as any).statusCode,
           success: false,
           error: (error as any).error || 'Request Error',
-          message: error.message || 'Request failed'
+          message: error.message || 'Request failed',
         })
       }
 

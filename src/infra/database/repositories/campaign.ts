@@ -19,9 +19,21 @@ export interface PaginationParams {
   limit: number
 }
 
+export interface CreateCampaignParams {
+  name: string
+  startDate: Date
+  endDate: Date
+  isDefault?: boolean
+  minLives: number
+  maxLives: number
+  plans: number[]
+  value: number
+}
+
 export interface CampaignRepository {
   findManyPaginated(params: PaginationParams): Promise<Campaign[]>
   count(): Promise<number>
+  create(params: CreateCampaignParams): Promise<Campaign>
 }
 
 export class PrismaCampaignRepository implements CampaignRepository {
@@ -42,5 +54,20 @@ export class PrismaCampaignRepository implements CampaignRepository {
 
   async count(): Promise<number> {
     return this.prisma.campaign.count()
+  }
+
+  async create(params: CreateCampaignParams): Promise<Campaign> {
+    return this.prisma.campaign.create({
+      data: {
+        name: params.name,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        isDefault: params.isDefault ?? false,
+        minLives: params.minLives,
+        maxLives: params.maxLives,
+        plans: params.plans,
+        value: params.value,
+      },
+    })
   }
 }

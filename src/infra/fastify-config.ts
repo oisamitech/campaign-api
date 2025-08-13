@@ -20,8 +20,8 @@ export async function configureFastify(fastify: FastifyInstance) {
       statusCode: 401,
       success: false,
       error: 'Unauthorized',
-      message: err.message || 'Authentication required'
-    })
+      message: err.message || 'Authentication required',
+    }),
   })
 
   await fastify.register(swagger, {
@@ -43,10 +43,11 @@ export async function configureFastify(fastify: FastifyInstance) {
             type: 'http',
             scheme: 'bearer',
             bearerFormat: 'JWT',
-            description: 'Enter your Bearer token in the format: Bearer <token>'
-          }
-        }
-      }
+            description:
+              'Enter your Bearer token in the format: Bearer <token>',
+          },
+        },
+      },
     },
   })
 

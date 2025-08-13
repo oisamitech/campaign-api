@@ -149,7 +149,7 @@ export const errorResponseSchema = {
   properties: {
     statusCode: {
       type: 'number',
-      description: 'HTTP status code'
+      description: 'HTTP status code',
     },
     success: {
       type: 'boolean',
@@ -168,20 +168,126 @@ export const errorResponseSchema = {
   additionalProperties: false,
 }
 
+export const createCampaignBodySchema = {
+  type: 'object',
+  properties: {
+    name: {
+      type: 'string',
+      description: 'Campaign name (required, max 255 characters)',
+      minLength: 1,
+      maxLength: 255,
+    },
+    startDate: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Campaign start date (ISO format)',
+    },
+    endDate: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Campaign end date (ISO format)',
+    },
+    isDefault: {
+      type: 'boolean',
+      description:
+        'Whether this is the default campaign (optional, defaults to false)',
+      default: false,
+    },
+    minLives: {
+      type: 'number',
+      description: 'Minimum number of lives (must be positive)',
+      minimum: 1,
+    },
+    maxLives: {
+      type: 'number',
+      description: 'Maximum number of lives (must be positive)',
+      minimum: 1,
+    },
+    plans: {
+      type: 'array',
+      description: 'Array of available plans (positive numbers)',
+      items: {
+        type: 'number',
+        minimum: 1,
+      },
+      minItems: 1,
+    },
+    value: {
+      type: 'number',
+      description: 'Campaign value (percentage from 1 to 100)',
+      minimum: 1,
+      maximum: 100,
+    },
+  },
+  required: [
+    'name',
+    'startDate',
+    'endDate',
+    'minLives',
+    'maxLives',
+    'plans',
+    'value',
+  ],
+  additionalProperties: false,
+}
+
+export const createCampaignResponseSchema = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether the operation was successful',
+    },
+    data: campaignSchema,
+  },
+  required: ['success', 'data'],
+  additionalProperties: false,
+}
+
 export const listCampaignsSchema: FastifySchema = {
   description: 'List all campaigns with pagination support',
   tags: ['Campaigns'],
   summary: 'List campaigns',
   security: [
     {
-      bearerAuth: []
-    }
+      bearerAuth: [],
+    },
   ],
   querystring: listCampaignsQuerySchema,
   response: {
     200: {
       description: 'Campaigns list returned successfully',
       ...listCampaignsResponseSchema,
+    },
+    401: {
+      description: 'Unauthorized - Bearer token required or invalid',
+      ...errorResponseSchema,
+    },
+    500: {
+      description: 'Internal server error',
+      ...errorResponseSchema,
+    },
+  },
+}
+
+export const createCampaignSchema: FastifySchema = {
+  description: 'Create a new campaign',
+  tags: ['Campaigns'],
+  summary: 'Create campaign',
+  security: [
+    {
+      bearerAuth: [],
+    },
+  ],
+  body: createCampaignBodySchema,
+  response: {
+    201: {
+      description: 'Campaign created successfully',
+      ...createCampaignResponseSchema,
+    },
+    400: {
+      description: 'Invalid request data',
+      ...errorResponseSchema,
     },
     401: {
       description: 'Unauthorized - Bearer token required or invalid',

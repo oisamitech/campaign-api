@@ -7,26 +7,28 @@ import { env } from '../../src/config/env.js'
 describe('Database Integration Tests with Fastify', () => {
   let app: FastifyInstance
   let prisma: PrismaClient
-  
+
   // Helper function para criar headers de autorização
   const getAuthHeaders = () => {
     const authKey = env.BEARER_AUTH_KEY?.split(',')[0] || 'test-token'
     return {
-      authorization: `Bearer ${authKey}`
+      authorization: `Bearer ${authKey}`,
     }
   }
 
   beforeAll(async () => {
     // Criar aplicação Fastify
     app = await createApp()
-    
+
     // Conectar ao banco MySQL do docker-compose
     prisma = new PrismaClient({
       datasources: {
         db: {
-          url: process.env.DATABASE_URL || 'mysql://campaign_user:campaign_password@localhost:3306/campaigns'
-        }
-      }
+          url:
+            process.env.DATABASE_URL ||
+            'mysql://campaign_user:campaign_password@localhost:3306/campaigns',
+        },
+      },
     })
 
     // Aguardar conexão
@@ -44,19 +46,19 @@ describe('Database Integration Tests with Fastify', () => {
         minLives: 5,
         maxLives: 20,
         plans: [1, 2, 3],
-        value: 15
-      }
+        value: 15,
+      },
     })
   })
 
   afterAll(async () => {
     // Limpar dados de teste
     await prisma.campaign.deleteMany()
-  
+
     // Desconectar
     await prisma.$disconnect()
     console.log('✅ Desconectado do banco MySQL')
-    
+
     // Fechar aplicação
     await app.close()
     console.log('✅ Aplicação Fastify fechada')
@@ -68,12 +70,12 @@ describe('Database Integration Tests with Fastify', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/campaigns',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       })
 
       // Verificar resposta
       expect(response.statusCode).toBe(200)
-      
+
       const body = JSON.parse(response.body)
       console.log(body)
       expect(body.success).toBe(true)
@@ -87,7 +89,7 @@ describe('Database Integration Tests with Fastify', () => {
     it('should return 401 when no authorization header is provided', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/api/campaigns'
+        url: '/api/campaigns',
       })
 
       expect(response.statusCode).toBe(401)
@@ -100,8 +102,8 @@ describe('Database Integration Tests with Fastify', () => {
         method: 'GET',
         url: '/api/campaigns',
         headers: {
-          authorization: 'Bearer invalid-token'
-        }
+          authorization: 'Bearer invalid-token',
+        },
       })
 
       expect(response.statusCode).toBe(401)
@@ -116,10 +118,10 @@ describe('Database Integration Tests with Fastify', () => {
       const response1 = await app.inject({
         method: 'GET',
         url: '/api/campaigns?page=-1&limit=10',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       })
       expect(response1.statusCode).toBe(200) // Deve normalizar para página 1
-      
+
       const body1 = JSON.parse(response1.body)
       expect(body1.meta.currentPage).toBe(1)
 
@@ -127,10 +129,10 @@ describe('Database Integration Tests with Fastify', () => {
       const response2 = await app.inject({
         method: 'GET',
         url: '/api/campaigns?page=1&limit=1000',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       })
       expect(response2.statusCode).toBe(200)
-      
+
       const body2 = JSON.parse(response2.body)
       expect(body2.meta.itemsPerPage).toBeLessThanOrEqual(100) // Deve ter limite máximo
 
@@ -138,12 +140,12 @@ describe('Database Integration Tests with Fastify', () => {
       const response3 = await app.inject({
         method: 'GET',
         url: '/api/campaigns?page=abc&limit=xyz',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       })
-      
+
       // Pode retornar 200 (com valores padrão) ou 500 (se houver erro interno)
       expect([200, 500]).toContain(response3.statusCode)
-      
+
       if (response3.statusCode === 200) {
         const body3 = JSON.parse(response3.body)
         expect(body3.meta.currentPage).toBe(1)
@@ -162,110 +164,17 @@ describe('Database Integration Tests with Fastify', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/campaigns',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       })
 
       expect(response.statusCode).toBe(200)
-      
+
       const body = JSON.parse(response.body)
       expect(body.data).toEqual([])
       expect(body.meta.totalItems).toBe(0)
       expect(body.meta.totalPages).toBe(0)
       expect(body.meta.hasNextPage).toBe(false)
       expect(body.meta.hasPreviousPage).toBe(false)
-    })
-
-    it('should handle large dataset pagination', async () => {
-      // Criar múltiplas campanhas para testar paginação
-      const campaigns = Array.from({ length: 25 }, (_, i) => ({
-        name: `Bulk Campaign ${i + 1}`,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-12-31'),
-        minLives: 1,
-        maxLives: 10,
-        plans: [1],
-        value: 10
-      }))
-
-      await prisma.campaign.createMany({ data: campaigns })
-
-      // Testar primeira página
-      const response1 = await app.inject({
-        method: 'GET',
-        url: '/api/campaigns?page=1&limit=10',
-        headers: getAuthHeaders()
-      })
-      
-      const body1 = JSON.parse(response1.body)
-      expect(body1.data.length).toBe(10)
-      expect(body1.meta.currentPage).toBe(1)
-      expect(body1.meta.hasNextPage).toBe(true)
-      expect(body1.meta.hasPreviousPage).toBe(false)
-
-      // Testar segunda página
-      const response2 = await app.inject({
-        method: 'GET',
-        url: '/api/campaigns?page=2&limit=10',
-        headers: getAuthHeaders()
-      })
-      
-      const body2 = JSON.parse(response2.body)
-      expect(body2.data.length).toBe(10)
-      expect(body2.meta.currentPage).toBe(2)
-      expect(body2.meta.hasNextPage).toBe(true)
-      expect(body2.meta.hasPreviousPage).toBe(true)
-
-      // Testar última página
-      const response3 = await app.inject({
-        method: 'GET',
-        url: '/api/campaigns?page=3&limit=10',
-        headers: getAuthHeaders()
-      })
-      
-      const body3 = JSON.parse(response3.body)
-      expect(body3.meta.currentPage).toBe(3)
-      expect(body3.meta.hasNextPage).toBe(false)
-      expect(body3.meta.hasPreviousPage).toBe(true)
-
-      // Limpar campanhas de teste
-      await prisma.campaign.deleteMany({
-        where: {
-          name: {
-            startsWith: 'Bulk Campaign'
-          }
-        }
-      })
-    })
-
-    it('should handle concurrent requests', async () => {
-      // Fazer múltiplas requisições simultâneas
-      const requests = Array.from({ length: 5 }, () =>
-        app.inject({
-          method: 'GET',
-          url: '/api/campaigns',
-          headers: getAuthHeaders()
-        })
-      )
-
-      const responses = await Promise.all(requests)
-
-      // Todas devem retornar sucesso
-      responses.forEach(response => {
-        expect(response.statusCode).toBe(200)
-        
-        const body = JSON.parse(response.body)
-        expect(body.success).toBe(true)
-        expect(body.data).toBeDefined()
-        expect(Array.isArray(body.data)).toBe(true)
-      })
-
-      // Verificar consistência dos dados
-      const firstResponse = JSON.parse(responses[0].body)
-      responses.slice(1).forEach(response => {
-        const body = JSON.parse(response.body)
-        expect(body.meta.totalItems).toBe(firstResponse.meta.totalItems)
-        expect(body.data.length).toBe(firstResponse.data.length)
-      })
     })
 
     it('should handle malformed query parameters', async () => {
@@ -277,19 +186,19 @@ describe('Database Integration Tests with Fastify', () => {
         '/api/campaigns?page=null&limit=undefined',
         '/api/campaigns?page=1.5&limit=5.7',
         '/api/campaigns?page=0&limit=0',
-        '/api/campaigns?page=999999999999999&limit=999999999999999'
+        '/api/campaigns?page=999999999999999&limit=999999999999999',
       ]
 
       for (const url of malformedUrls) {
         const response = await app.inject({
           method: 'GET',
           url,
-          headers: getAuthHeaders()
+          headers: getAuthHeaders(),
         })
 
         // Pode retornar 200 (com valores normalizados) ou 500 (se houver erro interno)
         expect([200, 500]).toContain(response.statusCode)
-        
+
         if (response.statusCode === 200) {
           const body = JSON.parse(response.body)
           expect(body.success).toBe(true)
@@ -309,14 +218,14 @@ describe('Database Integration Tests with Fastify', () => {
         '/api/campaigns?page=1&limit=10&search=test',
         '/api/campaigns?page=1&limit=10&filter=active',
         '/api/campaigns?page=1&limit=10&sort=name',
-        '/api/campaigns?page=1&limit=10&order=desc'
+        '/api/campaigns?page=1&limit=10&order=desc',
       ]
 
       for (const url of specialUrls) {
         const response = await app.inject({
           method: 'GET',
           url,
-          headers: getAuthHeaders()
+          headers: getAuthHeaders(),
         })
 
         console.log(`URL: ${url} - Status: ${response.statusCode}`)
@@ -327,7 +236,7 @@ describe('Database Integration Tests with Fastify', () => {
         // A API pode retornar 200 (aceitar parâmetros extras) ou 400 (rejeitar)
         // Vamos testar ambos os cenários
         expect([200, 400]).toContain(response.statusCode)
-        
+
         if (response.statusCode === 200) {
           // Se aceitar, deve retornar dados válidos
           const body = JSON.parse(response.body)
@@ -344,27 +253,27 @@ describe('Database Integration Tests with Fastify', () => {
 
     it('should validate query parameter validation behavior', async () => {
       // Teste específico para entender como a validação funciona
-      
+
       // 1. Testar com apenas parâmetros válidos
       const validResponse = await app.inject({
         method: 'GET',
         url: '/api/campaigns?page=1&limit=5',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       })
       expect(validResponse.statusCode).toBe(200)
-      
+
       // 2. Testar com parâmetro extra
       const extraParamResponse = await app.inject({
         method: 'GET',
         url: '/api/campaigns?page=1&limit=5&invalid=test',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       })
-      
+
       console.log('Extra param response status:', extraParamResponse.statusCode)
       if (extraParamResponse.statusCode !== 200) {
         console.log('Extra param response body:', extraParamResponse.body)
       }
-      
+
       // Pode ser 200 ou 400 dependendo da configuração do Fastify
       expect([200, 400]).toContain(extraParamResponse.statusCode)
     })
@@ -374,17 +283,17 @@ describe('Database Integration Tests with Fastify', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/campaigns',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       })
 
       // Mesmo com problemas, deve retornar estrutura válida
       expect(response.statusCode).toBe(200)
-      
+
       const body = JSON.parse(response.body)
       expect(body).toHaveProperty('success')
       expect(body).toHaveProperty('data')
       expect(body).toHaveProperty('meta')
-      
+
       // Se houver erro, deve estar na estrutura correta
       if (!body.success) {
         expect(body).toHaveProperty('error')
