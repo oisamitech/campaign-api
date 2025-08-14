@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify'
 import {
   ListCampaignsUseCaseImpl,
   CreateCampaignUseCaseImpl,
+  UpdateCampaignUseCaseImpl,
 } from '../usecases/index.js'
 import {
   PrismaCampaignRepository,
@@ -11,13 +12,22 @@ import { prisma } from '../infra/database/prisma.js'
 import {
   listCampaignsSchema,
   createCampaignSchema,
+  updateCampaignSchema,
 } from '../schemas/campaigns.js'
-import { ListCampaignsQuery, CreateCampaignBody } from '../types/routes.js'
+import { 
+  ListCampaignsQuery, 
+  CreateCampaignBody,
+  UpdateCampaignParams,
+  UpdateCampaignBody,
+} from '../types/routes.js'
 
 export async function campaignRoutes(fastify: FastifyInstance) {
   const campaignRepository = new PrismaCampaignRepository(prisma)
   const listCampaignsUseCase = new ListCampaignsUseCaseImpl(campaignRepository)
   const createCampaignUseCase = new CreateCampaignUseCaseImpl(
+    campaignRepository
+  )
+  const updateCampaignUseCase = new UpdateCampaignUseCaseImpl(
     campaignRepository
   )
 
@@ -98,6 +108,63 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           success: false,
           error: 'Internal server error',
           message: 'Failed to create campaign',
+        })
+      }
+    }
+  )
+
+  fastify.patch(
+    '/campaigns/:id',
+    {
+      schema: updateCampaignSchema,
+      preHandler: [fastify.verifyBearerAuth!],
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params as UpdateCampaignParams
+        const body = request.body as UpdateCampaignBody
+
+        const result = await updateCampaignUseCase.execute(id, body)
+
+        return reply.status(200).send({
+          success: true,
+          data: result,
+        })
+      } catch (error: unknown) {
+        console.error('Error updating campaign:', error)
+
+        // Se for erro de campanha não encontrada, retornar 404
+        if (error instanceof Error && error.message === 'Campaign not found') {
+          return reply.status(404).send({
+            statusCode: 404,
+            success: false,
+            error: 'Not Found',
+            message: 'Campaign not found',
+          })
+        }
+
+        // Se for um erro de validação do use case, retornar 400
+        if (
+          error instanceof Error &&
+          (error.message.includes('Invalid') ||
+            error.message.includes('required') ||
+            error.message.includes('must be') ||
+            error.message.includes('cannot be') ||
+            error.message.includes('At least one field'))
+        ) {
+          return reply.status(400).send({
+            statusCode: 400,
+            success: false,
+            error: 'Bad Request',
+            message: error.message,
+          })
+        }
+
+        return reply.status(500).send({
+          statusCode: 500,
+          success: false,
+          error: 'Internal server error',
+          message: 'Failed to update campaign',
         })
       }
     }

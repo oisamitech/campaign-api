@@ -13,3 +13,10 @@ export {
   type CreateCampaignRequest,
   type CreateCampaignResponse,
 } from './create-campaign.js'
+
+export {
+  UpdateCampaignUseCase,
+  UpdateCampaignUseCaseImpl,
+  type UpdateCampaignRequest,
+  type UpdateCampaignResponse,
+} from './update-campaign.js'
