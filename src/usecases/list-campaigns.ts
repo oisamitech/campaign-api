@@ -3,20 +3,28 @@ import {
   PaginationParams,
 } from '../infra/database/repositories/index.js'
 
-export { PaginationParams }
-
 export interface CampaignResponse {
   id: string
   name: string
   startDate: Date
   endDate: Date
   isDefault: boolean
-  minLives: number
-  maxLives: number
-  plans: any
-  value: number
+  status: string
   createdAt: Date
   updatedAt: Date
+  rules: Array<{
+    id: string
+    minLives: number
+    maxLives: number
+    plans: number[]
+    value: number
+    paymentMethod: string[]
+    accommodation: string[]
+    typeProduct: string[]
+    obstetrics: string[]
+    createdAt: Date
+    updatedAt: Date
+  }>
 }
 
 export interface PaginationMeta {
@@ -43,44 +51,56 @@ export class ListCampaignsUseCaseImpl implements ListCampaignsUseCase {
   async execute(
     params?: PaginationParams
   ): Promise<PaginatedCampaignsResponse> {
-    try {
-      const { page = 1, limit = 10 } = params || {}
+    const paginationParams: PaginationParams = {
+      page: Math.max(1, params?.page ?? 1),
+      limit: Math.min(100, Math.max(1, params?.limit ?? 10)),
+    }
 
-      const validPage = Math.max(1, page)
-      const validLimit = Math.min(Math.max(1, limit), 100)
+    const [campaigns, totalItems] = await Promise.all([
+      this.campaignRepository.findManyPaginatedWithRules(paginationParams),
+      this.campaignRepository.count(),
+    ])
 
-      const [campaigns, totalItems] = await Promise.all([
-        this.campaignRepository.findManyPaginated({
-          page: validPage,
-          limit: validLimit,
-        }),
-        this.campaignRepository.count(),
-      ])
+    const totalPages = Math.ceil(totalItems / paginationParams.limit)
+    const hasNextPage = paginationParams.page < totalPages
+    const hasPreviousPage = paginationParams.page > 1
 
-      const totalPages = Math.ceil(totalItems / validLimit)
-      const hasNextPage = validPage < totalPages
-      const hasPreviousPage = validPage > 1
+    const meta: PaginationMeta = {
+      currentPage: paginationParams.page,
+      totalPages,
+      totalItems,
+      itemsPerPage: paginationParams.limit,
+      hasNextPage,
+      hasPreviousPage,
+    }
 
-      const campaignsData = campaigns.map(campaign => ({
-        ...campaign,
-        id: campaign.id.toString(),
-      }))
+    const data: CampaignResponse[] = campaigns.map(campaign => ({
+      id: campaign.id.toString(),
+      name: campaign.name,
+      startDate: campaign.startDate,
+      endDate: campaign.endDate,
+      isDefault: campaign.isDefault,
+      status: campaign.status,
+      createdAt: campaign.createdAt,
+      updatedAt: campaign.updatedAt,
+      rules: campaign.rules.map(rule => ({
+        id: rule.id.toString(),
+        minLives: rule.minLives,
+        maxLives: rule.maxLives,
+        plans: rule.plans as number[],
+        value: rule.value,
+        paymentMethod: rule.paymentMethod as string[],
+        accommodation: rule.accommodation as string[],
+        typeProduct: rule.typeProduct as string[],
+        obstetrics: rule.obstetrics as string[],
+        createdAt: rule.createdAt,
+        updatedAt: rule.updatedAt,
+      })),
+    }))
 
-      return {
-        data: campaignsData,
-        meta: {
-          currentPage: validPage,
-          totalPages,
-          totalItems,
-          itemsPerPage: validLimit,
-          hasNextPage,
-          hasPreviousPage,
-        },
-      }
-    } catch (error) {
-      throw new Error(
-        `Failed to list campaigns: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+    return {
+      data,
+      meta,
     }
   }
 }

@@ -1,22 +1,33 @@
 import { PrismaClient } from '@prisma/client'
 
+// Interface da entidade Campaign refatorada
 export interface Campaign {
   id: bigint
   name: string
   startDate: Date
   endDate: Date
   isDefault: boolean
-  minLives: number
-  maxLives: number
-  plans: any
-  value: number
-  paymentMethod: any
-  accommodation: any
-  typeProduct: any
-  obstetrics: any
+  status: string
   createdAt: Date
   updatedAt: Date
   deletedAt?: Date | null
+}
+
+// Interface para Campaign com suas regras
+export interface CampaignWithRules extends Campaign {
+  rules: Array<{
+    id: bigint
+    minLives: number
+    maxLives: number
+    plans: number[]
+    paymentMethod: string[]
+    accommodation: string[]
+    typeProduct: string[]
+    obstetrics: string[]
+    value: number
+    createdAt: Date
+    updatedAt: Date
+  }>
 }
 
 export interface PaginationParams {
@@ -24,45 +35,39 @@ export interface PaginationParams {
   limit: number
 }
 
+// Interface para criação de campanha (sem as regras que são criadas separadamente)
 export interface CreateCampaignParams {
   name: string
   startDate: Date
   endDate: Date
   isDefault?: boolean
-  minLives: number
-  maxLives: number
-  plans: number[]
-  value: number
-  paymentMethod: string[]
-  accommodation: string[]
-  typeProduct: string[]
-  obstetrics: string[]
+  status?: string
 }
 
+// Interface para atualização de campanha
 export interface UpdateCampaignParams {
   name?: string
   startDate?: Date
   endDate?: Date
   isDefault?: boolean
-  minLives?: number
-  maxLives?: number
-  plans?: number[]
-  value?: number
-  paymentMethod?: string[]
-  accommodation?: string[]
-  typeProduct?: string[]
-  obstetrics?: string[]
+  status?: string
 }
 
+// Interface do repositório de campanha
 export interface CampaignRepository {
   findManyPaginated(params: PaginationParams): Promise<Campaign[]>
+  findManyPaginatedWithRules(
+    params: PaginationParams
+  ): Promise<CampaignWithRules[]>
   count(): Promise<number>
   create(params: CreateCampaignParams): Promise<Campaign>
   findById(id: string): Promise<Campaign | null>
+  findByIdWithRules(id: string): Promise<CampaignWithRules | null>
   update(id: string, params: UpdateCampaignParams): Promise<Campaign>
   delete(id: string): Promise<Campaign>
 }
 
+// Implementação do repositório usando Prisma
 export class PrismaCampaignRepository implements CampaignRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -82,6 +87,34 @@ export class PrismaCampaignRepository implements CampaignRepository {
     })
   }
 
+  async findManyPaginatedWithRules(
+    params: PaginationParams
+  ): Promise<CampaignWithRules[]> {
+    const { page, limit } = params
+    const offset = (page - 1) * limit
+
+    return this.prisma.campaign.findMany({
+      where: {
+        deletedAt: null,
+      },
+      include: {
+        rules: {
+          where: {
+            deletedAt: null,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip: offset,
+      take: limit,
+    }) as Promise<CampaignWithRules[]>
+  }
+
   async count(): Promise<number> {
     return this.prisma.campaign.count({
       where: {
@@ -97,14 +130,7 @@ export class PrismaCampaignRepository implements CampaignRepository {
         startDate: params.startDate,
         endDate: params.endDate,
         isDefault: params.isDefault ?? false,
-        minLives: params.minLives,
-        maxLives: params.maxLives,
-        plans: params.plans,
-        value: params.value,
-        paymentMethod: params.paymentMethod,
-        accommodation: params.accommodation,
-        typeProduct: params.typeProduct,
-        obstetrics: params.obstetrics,
+        status: params.status ?? 'ACTIVE',
       },
     })
   }
@@ -124,6 +150,31 @@ export class PrismaCampaignRepository implements CampaignRepository {
     }
   }
 
+  async findByIdWithRules(id: string): Promise<CampaignWithRules | null> {
+    try {
+      const campaign = await this.prisma.campaign.findUnique({
+        where: {
+          id: BigInt(id),
+          deletedAt: null,
+        },
+        include: {
+          rules: {
+            where: {
+              deletedAt: null,
+            },
+            orderBy: {
+              createdAt: 'asc',
+            },
+          },
+        },
+      })
+      return campaign as CampaignWithRules | null
+    } catch (error) {
+      console.error('Error finding campaign with rules by id', error)
+      return null
+    }
+  }
+
   async update(id: string, params: UpdateCampaignParams): Promise<Campaign> {
     return this.prisma.campaign.update({
       where: {
@@ -135,22 +186,7 @@ export class PrismaCampaignRepository implements CampaignRepository {
         ...(params.startDate !== undefined && { startDate: params.startDate }),
         ...(params.endDate !== undefined && { endDate: params.endDate }),
         ...(params.isDefault !== undefined && { isDefault: params.isDefault }),
-        ...(params.minLives !== undefined && { minLives: params.minLives }),
-        ...(params.maxLives !== undefined && { maxLives: params.maxLives }),
-        ...(params.plans !== undefined && { plans: params.plans }),
-        ...(params.value !== undefined && { value: params.value }),
-        ...(params.paymentMethod !== undefined && {
-          paymentMethod: params.paymentMethod,
-        }),
-        ...(params.accommodation !== undefined && {
-          accommodation: params.accommodation,
-        }),
-        ...(params.typeProduct !== undefined && {
-          typeProduct: params.typeProduct,
-        }),
-        ...(params.obstetrics !== undefined && {
-          obstetrics: params.obstetrics,
-        }),
+        ...(params.status !== undefined && { status: params.status }),
       },
     })
   }

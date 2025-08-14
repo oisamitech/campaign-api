@@ -106,4 +106,5 @@ export const successResponseSchema = {
 
 // Exportar schemas existentes
 export * from './campaigns.js'
+export * from './rules.js'
 export * from './health.js'
