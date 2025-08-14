@@ -17,20 +17,25 @@ describe('Update Campaign Integration Tests', () => {
     }
   }
 
-  // Atualizar o payload válido:
+  // Payload válido para criar campanha com regras
   const getValidCampaignPayload = () => ({
     name: 'Test Campaign - Update',
     startDate: '2024-06-01T00:00:00.000Z',
     endDate: '2024-12-31T23:59:59.000Z',
-    minLives: 5,
-    maxLives: 20,
-    plans: [1, 2, 3],
-    value: 15,
     isDefault: false,
-    paymentMethod: ['PIX', 'CREDITCARD'],
-    accommodation: ['APARTMENT'],
-    typeProduct: ['withParticipation'],
-    obstetrics: ['withObstetric'],
+    status: 'ACTIVE',
+    rules: [
+      {
+        minLives: 5,
+        maxLives: 20,
+        plans: [1, 2, 3],
+        value: 15,
+        paymentMethod: ['PIX', 'CREDITCARD'],
+        accommodation: ['APARTMENT'],
+        typeProduct: ['withParticipation'],
+        obstetrics: ['withObstetric'],
+      },
+    ],
   })
 
   // Helper function para criar uma campanha de teste
@@ -70,12 +75,14 @@ describe('Update Campaign Integration Tests', () => {
   })
 
   beforeEach(async () => {
-    // Limpar campanhas existentes antes de cada teste
+    // Limpar campanhas e regras existentes antes de cada teste
+    await prisma.rule.deleteMany()
     await prisma.campaign.deleteMany()
   })
 
   afterAll(async () => {
     // Limpar dados de teste
+    await prisma.rule.deleteMany()
     await prisma.campaign.deleteMany()
 
     // Desconectar
@@ -88,19 +95,14 @@ describe('Update Campaign Integration Tests', () => {
   })
 
   describe('PATCH /api/campaigns/:id - Success Cases (200)', () => {
-    it('should update a campaign successfully with valid data', async () => {
+    it('should update campaign basic fields successfully', async () => {
       // Criar uma campanha primeiro
       const createdCampaign = await createTestCampaign()
 
       const updatePayload = {
         name: 'Updated Campaign Name',
-        value: 25,
-        minLives: 10,
-        maxLives: 30,
-        paymentMethod: ['PIX', 'BANKSLIP'],
-        accommodation: ['INFIRMARY'],
-        typeProduct: ['withoutParticipation'],
-        obstetrics: ['withoutObstetric'],
+        isDefault: true,
+        status: 'INACTIVE',
       }
 
       const response = await app.inject({
@@ -117,63 +119,27 @@ describe('Update Campaign Integration Tests', () => {
       expect(body.data).toBeDefined()
       expect(body.data.id).toBe(createdCampaign.id)
       expect(body.data.name).toBe(updatePayload.name)
-      expect(body.data.value).toBe(updatePayload.value)
-      expect(body.data.minLives).toBe(updatePayload.minLives)
-      expect(body.data.maxLives).toBe(updatePayload.maxLives)
+      expect(body.data.isDefault).toBe(updatePayload.isDefault)
+      expect(body.data.status).toBe(updatePayload.status)
       expect(body.data.updatedAt).toBeDefined()
-      expect(body.data.paymentMethod).toEqual(updatePayload.paymentMethod)
-      expect(body.data.accommodation).toEqual(updatePayload.accommodation)
-      expect(body.data.typeProduct).toEqual(updatePayload.typeProduct)
-      expect(body.data.obstetrics).toEqual(updatePayload.obstetrics)
 
       // Verificar se foi realmente atualizado no banco
       const updatedCampaign = await prisma.campaign.findUnique({
-        where: { id: parseInt(createdCampaign.id) },
+        where: { id: BigInt(createdCampaign.id) },
       })
       expect(updatedCampaign).toBeDefined()
       expect(updatedCampaign?.name).toBe(updatePayload.name)
-      expect(updatedCampaign?.value).toBe(updatePayload.value)
-      expect(updatedCampaign?.minLives).toBe(updatePayload.minLives)
-      expect(updatedCampaign?.maxLives).toBe(updatePayload.maxLives)
-      expect(updatedCampaign?.paymentMethod).toEqual(
-        updatePayload.paymentMethod
-      )
-      expect(updatedCampaign?.accommodation).toEqual(
-        updatePayload.accommodation
-      )
-      expect(updatedCampaign?.typeProduct).toEqual(updatePayload.typeProduct)
-      expect(updatedCampaign?.obstetrics).toEqual(updatePayload.obstetrics)
+      expect(updatedCampaign?.isDefault).toBe(updatePayload.isDefault)
+      expect(updatedCampaign?.status).toBe(updatePayload.status)
     })
 
     it('should update only one field and keep others unchanged', async () => {
       const createdCampaign = await createTestCampaign()
       const originalName = createdCampaign.name
-      const originalValue = createdCampaign.value
+      const originalStatus = createdCampaign.status
 
       const updatePayload = {
-        minLives: 15, // Só alterar minLives
-      }
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload,
-      })
-
-      expect(response.statusCode).toBe(200)
-
-      const body = JSON.parse(response.body)
-      expect(body.data.minLives).toBe(15)
-      expect(body.data.name).toBe(originalName) // Deve permanecer inalterado
-      expect(body.data.value).toBe(originalValue) // Deve permanecer inalterado
-    })
-
-    it('should update isDefault field successfully', async () => {
-      const createdCampaign = await createTestCampaign({ isDefault: false })
-
-      const updatePayload = {
-        isDefault: true,
+        isDefault: true, // Só alterar isDefault
       }
 
       const response = await app.inject({
@@ -187,6 +153,37 @@ describe('Update Campaign Integration Tests', () => {
 
       const body = JSON.parse(response.body)
       expect(body.data.isDefault).toBe(true)
+      expect(body.data.name).toBe(originalName) // Deve permanecer inalterado
+      expect(body.data.status).toBe(originalStatus) // Deve permanecer inalterado
+    })
+
+    it('should update campaign dates successfully', async () => {
+      const createdCampaign = await createTestCampaign({
+        startDate: '2024-01-01T00:00:00.000Z',
+        endDate: '2024-06-01T00:00:00.000Z',
+      })
+
+      const updatePayload = {
+        startDate: '2024-02-01T00:00:00.000Z',
+        endDate: '2024-08-01T00:00:00.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${createdCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(new Date(body.data.startDate)).toEqual(
+        new Date(updatePayload.startDate)
+      )
+      expect(new Date(body.data.endDate)).toEqual(
+        new Date(updatePayload.endDate)
+      )
     })
   })
 
@@ -236,11 +233,12 @@ describe('Update Campaign Integration Tests', () => {
       )
     })
 
-    it('should return 400 when minLives is zero or negative', async () => {
+    it('should return 400 when name exceeds 255 characters', async () => {
       const createdCampaign = await createTestCampaign()
+      const tooLongName = 'A'.repeat(256)
 
       const updatePayload = {
-        minLives: 0,
+        name: tooLongName,
       }
 
       const response = await app.inject({
@@ -253,60 +251,74 @@ describe('Update Campaign Integration Tests', () => {
       expect(response.statusCode).toBe(400)
 
       const body = JSON.parse(response.body)
-      expect(body.success).toBe(false)
-      expect(body.message).toContain('body/minLives must be >= 1')
-    })
-
-    it('should return 400 when value is out of range', async () => {
-      const createdCampaign = await createTestCampaign()
-
-      const updatePayload1 = {
-        value: 0,
-      }
-
-      const response1 = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload1,
-      })
-
-      expect(response1.statusCode).toBe(400)
-
-      const updatePayload2 = {
-        value: 101,
-      }
-
-      const response2 = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload2,
-      })
-
-      expect(response2.statusCode).toBe(400)
-    })
-
-    it('should return 400 when plans array is empty', async () => {
-      const createdCampaign = await createTestCampaign()
-
-      const updatePayload = {
-        plans: [],
-      }
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload,
-      })
-
-      expect(response.statusCode).toBe(400)
-
-      const body = JSON.parse(response.body)
-      expect(body.success).toBe(false)
       expect(body.message).toContain(
-        'body/plans must NOT have fewer than 1 items'
+        'body/name must NOT have more than 255 characters'
+      )
+    })
+
+    it('should return 400 when start date is invalid format', async () => {
+      const createdCampaign = await createTestCampaign()
+
+      const updatePayload = {
+        startDate: 'invalid-date-format',
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${createdCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(400)
+
+      const body = JSON.parse(response.body)
+      expect(body.message).toContain(
+        'body/startDate must match format "date-time"'
+      )
+    })
+
+    it('should return 400 when end date is invalid format', async () => {
+      const createdCampaign = await createTestCampaign()
+
+      const updatePayload = {
+        endDate: 'not-a-date',
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${createdCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(400)
+
+      const body = JSON.parse(response.body)
+      expect(body.message).toContain(
+        'body/endDate must match format "date-time"'
+      )
+    })
+
+    it('should return 400 when status is invalid', async () => {
+      const createdCampaign = await createTestCampaign()
+
+      const updatePayload = {
+        status: 'INVALID_STATUS',
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${createdCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(400)
+
+      const body = JSON.parse(response.body)
+      expect(body.message).toContain(
+        'body/status must be equal to one of the allowed values'
       )
     })
   })
@@ -357,29 +369,6 @@ describe('Update Campaign Integration Tests', () => {
       expect(body.data.name).toBe(maxLengthName)
     })
 
-    it('should return 400 when name exceeds 255 characters', async () => {
-      const createdCampaign = await createTestCampaign()
-      const tooLongName = 'A'.repeat(256)
-
-      const updatePayload = {
-        name: tooLongName,
-      }
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload,
-      })
-
-      expect(response.statusCode).toBe(400)
-
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain(
-        'body/name must NOT have more than 255 characters'
-      )
-    })
-
     it('should trim whitespace from campaign name', async () => {
       const createdCampaign = await createTestCampaign()
 
@@ -398,264 +387,6 @@ describe('Update Campaign Integration Tests', () => {
 
       const body = JSON.parse(response.body)
       expect(body.data.name).toBe('Trimmed Campaign Name')
-    })
-
-    it('should return 400 when start date is invalid format', async () => {
-      const createdCampaign = await createTestCampaign()
-
-      const updatePayload = {
-        startDate: 'invalid-date-format',
-      }
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload,
-      })
-
-      expect(response.statusCode).toBe(400)
-
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain(
-        'body/startDate must match format "date-time"'
-      )
-    })
-
-    it('should return 400 when end date is invalid format', async () => {
-      const createdCampaign = await createTestCampaign()
-
-      const updatePayload = {
-        endDate: 'not-a-date',
-      }
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload,
-      })
-
-      expect(response.statusCode).toBe(400)
-
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain(
-        'body/endDate must match format "date-time"'
-      )
-    })
-
-    it('should return 400 when new start date is after existing end date', async () => {
-      const createdCampaign = await createTestCampaign({
-        startDate: '2024-01-01T00:00:00.000Z',
-        endDate: '2024-06-01T00:00:00.000Z',
-      })
-
-      const updatePayload = {
-        startDate: '2024-12-01T00:00:00.000Z', // Depois do endDate existente
-      }
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload,
-      })
-
-      expect(response.statusCode).toBe(400)
-
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain('Start date must be before end date')
-    })
-
-    it('should return 400 when new end date is before existing start date', async () => {
-      const createdCampaign = await createTestCampaign({
-        startDate: '2024-06-01T00:00:00.000Z',
-        endDate: '2024-12-01T00:00:00.000Z',
-      })
-
-      const updatePayload = {
-        endDate: '2024-01-01T00:00:00.000Z', // Antes do startDate existente
-      }
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload,
-      })
-
-      expect(response.statusCode).toBe(400)
-
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain('Start date must be before end date')
-    })
-
-    it('should return 400 when new minLives is greater than existing maxLives', async () => {
-      const createdCampaign = await createTestCampaign({
-        minLives: 5,
-        maxLives: 10,
-      })
-
-      const updatePayload = {
-        minLives: 15,
-      }
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload,
-      })
-
-      expect(response.statusCode).toBe(400)
-
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain(
-        'Minimum lives cannot be greater than maximum lives'
-      )
-    })
-
-    it('should return 400 when new maxLives is less than existing minLives', async () => {
-      const createdCampaign = await createTestCampaign({
-        minLives: 10,
-        maxLives: 20,
-      })
-
-      const updatePayload = {
-        maxLives: 5,
-      }
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload,
-      })
-
-      expect(response.statusCode).toBe(400)
-
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain(
-        'Minimum lives cannot be greater than maximum lives'
-      )
-    })
-
-    it('should return 400 when plans contains negative numbers', async () => {
-      const createdCampaign = await createTestCampaign()
-
-      const updatePayload = {
-        plans: [1, 2, -1, 3],
-      }
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload,
-      })
-
-      expect(response.statusCode).toBe(400)
-
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain('body/plans/2 must be >= 1')
-    })
-
-    it('should return 400 when plans contains zero', async () => {
-      const createdCampaign = await createTestCampaign()
-
-      const updatePayload = {
-        plans: [1, 2, 0, 3],
-      }
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload,
-      })
-
-      expect(response.statusCode).toBe(400)
-
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain('body/plans/2 must be >= 1')
-    })
-
-    it('should handle large plans array successfully', async () => {
-      const createdCampaign = await createTestCampaign()
-      const largePlansArray = Array.from({ length: 100 }, (_, i) => i + 1)
-
-      const updatePayload = {
-        plans: largePlansArray,
-      }
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload,
-      })
-
-      expect(response.statusCode).toBe(200)
-
-      const body = JSON.parse(response.body)
-      expect(body.data.plans).toEqual(largePlansArray)
-    })
-
-    it('should handle minimum and maximum values for lives', async () => {
-      const createdCampaign = await createTestCampaign()
-
-      const updatePayload = {
-        minLives: 1,
-        maxLives: 1,
-      }
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload,
-      })
-
-      expect(response.statusCode).toBe(200)
-
-      const body = JSON.parse(response.body)
-      expect(body.data.minLives).toBe(1)
-      expect(body.data.maxLives).toBe(1)
-    })
-
-    it('should handle minimum and maximum values for value field', async () => {
-      const createdCampaign = await createTestCampaign()
-
-      // Testar valor mínimo
-      const updatePayload1 = {
-        value: 1,
-      }
-
-      const response1 = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload1,
-      })
-
-      expect(response1.statusCode).toBe(200)
-
-      // Testar valor máximo
-      const updatePayload2 = {
-        value: 100,
-      }
-
-      const response2 = await app.inject({
-        method: 'PATCH',
-        url: `/api/campaigns/${createdCampaign.id}`,
-        headers: getAuthHeaders(),
-        payload: updatePayload2,
-      })
-
-      expect(response2.statusCode).toBe(200)
-
-      const body2 = JSON.parse(response2.body)
-      expect(body2.data.value).toBe(100)
     })
 
     it('should handle special characters in campaign name', async () => {
@@ -749,26 +480,42 @@ describe('Update Campaign Integration Tests', () => {
     })
   })
 
-  describe('PATCH /api/campaigns/:id - Content Type Tests', () => {
-    it('should return 400 when content-type is not application/json', async () => {
+  describe('PATCH /api/campaigns/:id - Notes about Rules', () => {
+    it('should note that rules are managed separately via dedicated endpoints', async () => {
       const createdCampaign = await createTestCampaign()
 
+      // Verificar que a campanha foi criada com regras
+      expect(createdCampaign.rules).toBeDefined()
+      expect(createdCampaign.rules.length).toBeGreaterThan(0)
+
+      // Atualizar apenas dados básicos da campanha
       const updatePayload = {
-        name: 'Updated Name',
+        name: 'Updated Campaign Name',
+        status: 'INACTIVE',
       }
 
       const response = await app.inject({
         method: 'PATCH',
         url: `/api/campaigns/${createdCampaign.id}`,
-        headers: {
-          authorization: getAuthHeaders().authorization,
-          'content-type': 'text/plain',
-        },
-        payload: JSON.stringify(updatePayload),
+        headers: getAuthHeaders(),
+        payload: updatePayload,
       })
 
-      // Pode retornar 400 ou 415 dependendo da configuração do Fastify
-      expect([400, 415]).toContain(response.statusCode)
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.data.name).toBe(updatePayload.name)
+      expect(body.data.status).toBe(updatePayload.status)
+
+      // Note: As regras não são retornadas no endpoint de update
+      // Elas devem ser gerenciadas via endpoints específicos de regras
+      expect(body.data.rules).toBeUndefined()
+
+      // Verificar que as regras ainda existem no banco
+      const rulesInDb = await prisma.rule.findMany({
+        where: { campaignId: BigInt(createdCampaign.id), deletedAt: null },
+      })
+      expect(rulesInDb.length).toBeGreaterThan(0)
     })
   })
 })

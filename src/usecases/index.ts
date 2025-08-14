@@ -1,28 +1,5 @@
-export {
-  ListCampaignsUseCase,
-  ListCampaignsUseCaseImpl,
-  type CampaignResponse,
-  type PaginationParams,
-  type PaginationMeta,
-  type PaginatedCampaignsResponse,
-} from './list-campaigns.js'
-
-export {
-  CreateCampaignUseCase,
-  CreateCampaignUseCaseImpl,
-  type CreateCampaignRequest,
-  type CreateCampaignResponse,
-} from './create-campaign.js'
-
-export {
-  UpdateCampaignUseCase,
-  UpdateCampaignUseCaseImpl,
-  type UpdateCampaignRequest,
-  type UpdateCampaignResponse,
-} from './update-campaign.js'
-
-export {
-  DeleteCampaignUseCase,
-  DeleteCampaignUseCaseImpl,
-  type DeleteCampaignResponse,
-} from './delete-campaign.js'
+// Exportar use cases da Campaign
+export * from './create-campaign.js'
+export * from './list-campaigns.js'
+export * from './update-campaign.js'
+export * from './delete-campaign.js'

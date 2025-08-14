@@ -1,4 +1,5 @@
 import { FastifySchema } from 'fastify'
+import { ruleSchema, createCampaignRuleSchema } from './rules.js'
 
 export const listCampaignsQuerySchema = {
   type: 'object',
@@ -55,6 +56,7 @@ export const paginationMetaSchema = {
   additionalProperties: false,
 }
 
+// Schema da campanha com regras
 export const campaignSchema = {
   type: 'object',
   properties: {
@@ -80,56 +82,10 @@ export const campaignSchema = {
       type: 'boolean',
       description: 'Whether this is the default campaign',
     },
-    minLives: {
-      type: 'number',
-      description: 'Minimum number of lives',
-    },
-    maxLives: {
-      type: 'number',
-      description: 'Maximum number of lives',
-    },
-    plans: {
-      type: 'array',
-      items: {
-        type: 'number',
-      },
-      description: 'Array of available plans',
-    },
-    value: {
-      type: 'number',
-      description: 'Campaign value (percentage from 1 to 100)',
-    },
-    paymentMethod: {
-      type: 'array',
-      items: {
-        type: 'string',
-        enum: ['PIX', 'BANKSLIP', 'CREDITCARD'],
-      },
-      description: 'Array of accepted payment methods',
-    },
-    accommodation: {
-      type: 'array',
-      items: {
-        type: 'string',
-        enum: ['INFIRMARY', 'APARTMENT'],
-      },
-      description: 'Array of accommodation types',
-    },
-    typeProduct: {
-      type: 'array',
-      items: {
-        type: 'string',
-        enum: ['withParticipation', 'withoutParticipation'],
-      },
-      description: 'Array of product types',
-    },
-    obstetrics: {
-      type: 'array',
-      items: {
-        type: 'string',
-        enum: ['withObstetric', 'withoutObstetric'],
-      },
-      description: 'Array of obstetric options',
+    status: {
+      type: 'string',
+      enum: ['ACTIVE', 'INACTIVE', 'PAUSED'],
+      description: 'Campaign status',
     },
     createdAt: {
       type: 'string',
@@ -141,6 +97,11 @@ export const campaignSchema = {
       format: 'date-time',
       description: 'Last update date',
     },
+    rules: {
+      type: 'array',
+      items: ruleSchema,
+      description: 'Array of campaign rules',
+    },
   },
   required: [
     'id',
@@ -148,16 +109,10 @@ export const campaignSchema = {
     'startDate',
     'endDate',
     'isDefault',
-    'minLives',
-    'maxLives',
-    'plans',
-    'value',
-    'paymentMethod',
-    'accommodation',
-    'typeProduct',
-    'obstetrics',
+    'status',
     'createdAt',
     'updatedAt',
+    'rules',
   ],
   additionalProperties: false,
 }
@@ -204,6 +159,7 @@ export const errorResponseSchema = {
   additionalProperties: false,
 }
 
+// Schema para criação de campanha com regras obrigatórias
 export const createCampaignBodySchema = {
   type: 'object',
   properties: {
@@ -229,85 +185,20 @@ export const createCampaignBodySchema = {
         'Whether this is the default campaign (optional, defaults to false)',
       default: false,
     },
-    minLives: {
-      type: 'number',
-      description: 'Minimum number of lives (must be positive)',
-      minimum: 1,
+    status: {
+      type: 'string',
+      enum: ['ACTIVE', 'INACTIVE', 'PAUSED'],
+      description: 'Campaign status (optional, defaults to ACTIVE)',
+      default: 'ACTIVE',
     },
-    maxLives: {
-      type: 'number',
-      description: 'Maximum number of lives (must be positive)',
-      minimum: 1,
-    },
-    plans: {
+    rules: {
       type: 'array',
-      description: 'Array of available plans (positive numbers)',
-      items: {
-        type: 'number',
-        minimum: 1,
-      },
+      description: 'Array of campaign rules (at least one required)',
+      items: createCampaignRuleSchema,
       minItems: 1,
-    },
-    value: {
-      type: 'number',
-      description: 'Campaign value (percentage from 1 to 100)',
-      minimum: 1,
-      maximum: 100,
-    },
-    paymentMethod: {
-      type: 'array',
-      description: 'Array of accepted payment methods',
-      items: {
-        type: 'string',
-        enum: ['PIX', 'BANKSLIP', 'CREDITCARD'],
-      },
-      minItems: 1,
-      uniqueItems: true,
-    },
-    accommodation: {
-      type: 'array',
-      description: 'Array of accommodation types',
-      items: {
-        type: 'string',
-        enum: ['INFIRMARY', 'APARTMENT'],
-      },
-      minItems: 1,
-      uniqueItems: true,
-    },
-    typeProduct: {
-      type: 'array',
-      description: 'Array of product types',
-      items: {
-        type: 'string',
-        enum: ['withParticipation', 'withoutParticipation'],
-      },
-      minItems: 1,
-      uniqueItems: true,
-    },
-    obstetrics: {
-      type: 'array',
-      description: 'Array of obstetric options',
-      items: {
-        type: 'string',
-        enum: ['withObstetric', 'withoutObstetric'],
-      },
-      minItems: 1,
-      uniqueItems: true,
     },
   },
-  required: [
-    'name',
-    'startDate',
-    'endDate',
-    'minLives',
-    'maxLives',
-    'plans',
-    'value',
-    'paymentMethod',
-    'accommodation',
-    'typeProduct',
-    'obstetrics',
-  ],
+  required: ['name', 'startDate', 'endDate', 'rules'],
   additionalProperties: false,
 }
 
@@ -325,7 +216,7 @@ export const createCampaignResponseSchema = {
 }
 
 export const listCampaignsSchema: FastifySchema = {
-  description: 'List all campaigns with pagination support',
+  description: 'List all campaigns with their rules and pagination support',
   tags: ['Campaigns'],
   summary: 'List campaigns',
   security: [
@@ -363,6 +254,62 @@ export const updateCampaignParamsSchema = {
   additionalProperties: false,
 }
 
+// Schema de resposta simples da campanha (sem regras)
+export const simpleCampaignSchema = {
+  type: 'object',
+  properties: {
+    id: {
+      type: 'string',
+      description: 'Unique campaign ID',
+    },
+    name: {
+      type: 'string',
+      description: 'Campaign name',
+    },
+    startDate: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Campaign start date',
+    },
+    endDate: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Campaign end date',
+    },
+    isDefault: {
+      type: 'boolean',
+      description: 'Whether this is the default campaign',
+    },
+    status: {
+      type: 'string',
+      enum: ['ACTIVE', 'INACTIVE', 'PAUSED'],
+      description: 'Campaign status',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Creation date',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Last update date',
+    },
+  },
+  required: [
+    'id',
+    'name',
+    'startDate',
+    'endDate',
+    'isDefault',
+    'status',
+    'createdAt',
+    'updatedAt',
+  ],
+  additionalProperties: false,
+}
+
+// Schema para atualização de campanha (apenas dados básicos)
 export const updateCampaignBodySchema = {
   type: 'object',
   properties: {
@@ -386,74 +333,14 @@ export const updateCampaignBodySchema = {
       type: 'boolean',
       description: 'Whether this is the default campaign (optional)',
     },
-    minLives: {
-      type: 'number',
-      description: 'Minimum number of lives (optional, must be positive)',
-      minimum: 1,
-    },
-    maxLives: {
-      type: 'number',
-      description: 'Maximum number of lives (optional, must be positive)',
-      minimum: 1,
-    },
-    plans: {
-      type: 'array',
-      description: 'Array of available plans (optional, positive numbers)',
-      items: {
-        type: 'number',
-        minimum: 1,
-      },
-      minItems: 1,
-    },
-    value: {
-      type: 'number',
-      description: 'Campaign value (optional, percentage from 1 to 100)',
-      minimum: 1,
-      maximum: 100,
-    },
-    paymentMethod: {
-      type: 'array',
-      description: 'Array of accepted payment methods (optional)',
-      items: {
-        type: 'string',
-        enum: ['PIX', 'BANKSLIP', 'CREDITCARD'],
-      },
-      minItems: 1,
-      uniqueItems: true,
-    },
-    accommodation: {
-      type: 'array',
-      description: 'Array of accommodation types (optional)',
-      items: {
-        type: 'string',
-        enum: ['INFIRMARY', 'APARTMENT'],
-      },
-      minItems: 1,
-      uniqueItems: true,
-    },
-    typeProduct: {
-      type: 'array',
-      description: 'Array of product types (optional)',
-      items: {
-        type: 'string',
-        enum: ['withParticipation', 'withoutParticipation'],
-      },
-      minItems: 1,
-      uniqueItems: true,
-    },
-    obstetrics: {
-      type: 'array',
-      description: 'Array of obstetric options (optional)',
-      items: {
-        type: 'string',
-        enum: ['withObstetric', 'withoutObstetric'],
-      },
-      minItems: 1,
-      uniqueItems: true,
+    status: {
+      type: 'string',
+      enum: ['ACTIVE', 'INACTIVE', 'PAUSED'],
+      description: 'Campaign status (optional)',
     },
   },
   additionalProperties: false,
-  minProperties: 1, // Pelo menos um campo deve ser fornecido
+  minProperties: 1,
 }
 
 export const updateCampaignResponseSchema = {
@@ -463,14 +350,14 @@ export const updateCampaignResponseSchema = {
       type: 'boolean',
       description: 'Whether the operation was successful',
     },
-    data: campaignSchema,
+    data: simpleCampaignSchema,
   },
   required: ['success', 'data'],
   additionalProperties: false,
 }
 
 export const createCampaignSchema: FastifySchema = {
-  description: 'Create a new campaign',
+  description: 'Create a new campaign with rules',
   tags: ['Campaigns'],
   summary: 'Create campaign',
   security: [
@@ -557,14 +444,14 @@ export const deleteCampaignResponseSchema = {
     data: {
       type: 'object',
       properties: {
-        ...campaignSchema.properties,
+        ...simpleCampaignSchema.properties,
         deletedAt: {
           type: 'string',
           format: 'date-time',
           description: 'Deletion date',
         },
       },
-      required: [...campaignSchema.required, 'deletedAt'],
+      required: [...simpleCampaignSchema.required, 'deletedAt'],
       additionalProperties: false,
     },
   },
@@ -573,7 +460,7 @@ export const deleteCampaignResponseSchema = {
 }
 
 export const deleteCampaignSchema: FastifySchema = {
-  description: 'Delete a campaign (soft delete)',
+  description: 'Delete a campaign and its rules (soft delete)',
   tags: ['Campaigns'],
   summary: 'Delete campaign',
   security: [
