@@ -99,6 +99,38 @@ export const campaignSchema = {
       type: 'number',
       description: 'Campaign value (percentage from 1 to 100)',
     },
+    paymentMethod: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: ['PIX', 'BANKSLIP', 'CREDITCARD'],
+      },
+      description: 'Array of accepted payment methods',
+    },
+    accommodation: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: ['INFIRMARY', 'APARTMENT'],
+      },
+      description: 'Array of accommodation types',
+    },
+    typeProduct: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: ['withParticipation', 'withoutParticipation'],
+      },
+      description: 'Array of product types',
+    },
+    obstetrics: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: ['withObstetric', 'withoutObstetric'],
+      },
+      description: 'Array of obstetric options',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -120,6 +152,10 @@ export const campaignSchema = {
     'maxLives',
     'plans',
     'value',
+    'paymentMethod',
+    'accommodation',
+    'typeProduct',
+    'obstetrics',
     'createdAt',
     'updatedAt',
   ],
@@ -218,6 +254,46 @@ export const createCampaignBodySchema = {
       minimum: 1,
       maximum: 100,
     },
+    paymentMethod: {
+      type: 'array',
+      description: 'Array of accepted payment methods',
+      items: {
+        type: 'string',
+        enum: ['PIX', 'BANKSLIP', 'CREDITCARD'],
+      },
+      minItems: 1,
+      uniqueItems: true,
+    },
+    accommodation: {
+      type: 'array',
+      description: 'Array of accommodation types',
+      items: {
+        type: 'string',
+        enum: ['INFIRMARY', 'APARTMENT'],
+      },
+      minItems: 1,
+      uniqueItems: true,
+    },
+    typeProduct: {
+      type: 'array',
+      description: 'Array of product types',
+      items: {
+        type: 'string',
+        enum: ['withParticipation', 'withoutParticipation'],
+      },
+      minItems: 1,
+      uniqueItems: true,
+    },
+    obstetrics: {
+      type: 'array',
+      description: 'Array of obstetric options',
+      items: {
+        type: 'string',
+        enum: ['withObstetric', 'withoutObstetric'],
+      },
+      minItems: 1,
+      uniqueItems: true,
+    },
   },
   required: [
     'name',
@@ -227,6 +303,10 @@ export const createCampaignBodySchema = {
     'maxLives',
     'plans',
     'value',
+    'paymentMethod',
+    'accommodation',
+    'typeProduct',
+    'obstetrics',
   ],
   additionalProperties: false,
 }
@@ -330,6 +410,46 @@ export const updateCampaignBodySchema = {
       description: 'Campaign value (optional, percentage from 1 to 100)',
       minimum: 1,
       maximum: 100,
+    },
+    paymentMethod: {
+      type: 'array',
+      description: 'Array of accepted payment methods (optional)',
+      items: {
+        type: 'string',
+        enum: ['PIX', 'BANKSLIP', 'CREDITCARD'],
+      },
+      minItems: 1,
+      uniqueItems: true,
+    },
+    accommodation: {
+      type: 'array',
+      description: 'Array of accommodation types (optional)',
+      items: {
+        type: 'string',
+        enum: ['INFIRMARY', 'APARTMENT'],
+      },
+      minItems: 1,
+      uniqueItems: true,
+    },
+    typeProduct: {
+      type: 'array',
+      description: 'Array of product types (optional)',
+      items: {
+        type: 'string',
+        enum: ['withParticipation', 'withoutParticipation'],
+      },
+      minItems: 1,
+      uniqueItems: true,
+    },
+    obstetrics: {
+      type: 'array',
+      description: 'Array of obstetric options (optional)',
+      items: {
+        type: 'string',
+        enum: ['withObstetric', 'withoutObstetric'],
+      },
+      minItems: 1,
+      uniqueItems: true,
     },
   },
   additionalProperties: false,
@@ -444,10 +564,7 @@ export const deleteCampaignResponseSchema = {
           description: 'Deletion date',
         },
       },
-      required: [
-        ...campaignSchema.required,
-        'deletedAt',
-      ],
+      required: [...campaignSchema.required, 'deletedAt'],
       additionalProperties: false,
     },
   },

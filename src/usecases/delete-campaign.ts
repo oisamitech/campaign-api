@@ -10,6 +10,10 @@ export interface DeleteCampaignResponse {
   maxLives: number
   plans: number[]
   value: number
+  paymentMethod: string[]
+  accommodation: string[]
+  typeProduct: string[]
+  obstetrics: string[]
   createdAt: Date
   updatedAt: Date
   deletedAt: Date
@@ -48,6 +52,10 @@ export class DeleteCampaignUseCaseImpl implements DeleteCampaignUseCase {
       maxLives: deletedCampaign.maxLives,
       plans: deletedCampaign.plans as number[],
       value: deletedCampaign.value,
+      paymentMethod: deletedCampaign.paymentMethod as string[],
+      accommodation: deletedCampaign.accommodation as string[],
+      typeProduct: deletedCampaign.typeProduct as string[],
+      obstetrics: deletedCampaign.obstetrics as string[],
       createdAt: deletedCampaign.createdAt,
       updatedAt: deletedCampaign.updatedAt,
       deletedAt: deletedCampaign.deletedAt!,

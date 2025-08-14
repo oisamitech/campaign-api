@@ -10,6 +10,10 @@ export interface Campaign {
   maxLives: number
   plans: any
   value: number
+  paymentMethod: any
+  accommodation: any
+  typeProduct: any
+  obstetrics: any
   createdAt: Date
   updatedAt: Date
   deletedAt?: Date | null
@@ -29,6 +33,10 @@ export interface CreateCampaignParams {
   maxLives: number
   plans: number[]
   value: number
+  paymentMethod: string[]
+  accommodation: string[]
+  typeProduct: string[]
+  obstetrics: string[]
 }
 
 export interface UpdateCampaignParams {
@@ -40,6 +48,10 @@ export interface UpdateCampaignParams {
   maxLives?: number
   plans?: number[]
   value?: number
+  paymentMethod?: string[]
+  accommodation?: string[]
+  typeProduct?: string[]
+  obstetrics?: string[]
 }
 
 export interface CampaignRepository {
@@ -89,6 +101,10 @@ export class PrismaCampaignRepository implements CampaignRepository {
         maxLives: params.maxLives,
         plans: params.plans,
         value: params.value,
+        paymentMethod: params.paymentMethod,
+        accommodation: params.accommodation,
+        typeProduct: params.typeProduct,
+        obstetrics: params.obstetrics,
       },
     })
   }
@@ -103,7 +119,7 @@ export class PrismaCampaignRepository implements CampaignRepository {
       })
       return campaign
     } catch (error) {
-      // Se o ID não for um número válido, retorna null
+      console.error('Error finding campaign by id', error)
       return null
     }
   }
@@ -123,6 +139,18 @@ export class PrismaCampaignRepository implements CampaignRepository {
         ...(params.maxLives !== undefined && { maxLives: params.maxLives }),
         ...(params.plans !== undefined && { plans: params.plans }),
         ...(params.value !== undefined && { value: params.value }),
+        ...(params.paymentMethod !== undefined && {
+          paymentMethod: params.paymentMethod,
+        }),
+        ...(params.accommodation !== undefined && {
+          accommodation: params.accommodation,
+        }),
+        ...(params.typeProduct !== undefined && {
+          typeProduct: params.typeProduct,
+        }),
+        ...(params.obstetrics !== undefined && {
+          obstetrics: params.obstetrics,
+        }),
       },
     })
   }

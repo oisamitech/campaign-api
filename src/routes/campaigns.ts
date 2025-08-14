@@ -16,8 +16,8 @@ import {
   updateCampaignSchema,
   deleteCampaignSchema,
 } from '../schemas/campaigns.js'
-import { 
-  ListCampaignsQuery, 
+import {
+  ListCampaignsQuery,
   CreateCampaignBody,
   UpdateCampaignParams,
   UpdateCampaignBody,
