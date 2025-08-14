@@ -564,10 +564,7 @@ export const deleteCampaignResponseSchema = {
           description: 'Deletion date',
         },
       },
-      required: [
-        ...campaignSchema.required,
-        'deletedAt',
-      ],
+      required: [...campaignSchema.required, 'deletedAt'],
       additionalProperties: false,
     },
   },

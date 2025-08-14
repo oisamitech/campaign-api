@@ -37,13 +37,19 @@ export interface UpdateCampaignResponse {
 }
 
 export interface UpdateCampaignUseCase {
-  execute(id: string, request: UpdateCampaignRequest): Promise<UpdateCampaignResponse>
+  execute(
+    id: string,
+    request: UpdateCampaignRequest
+  ): Promise<UpdateCampaignResponse>
 }
 
 export class UpdateCampaignUseCaseImpl implements UpdateCampaignUseCase {
   constructor(private readonly campaignRepository: CampaignRepository) {}
 
-  async execute(id: string, request: UpdateCampaignRequest): Promise<UpdateCampaignResponse> {
+  async execute(
+    id: string,
+    request: UpdateCampaignRequest
+  ): Promise<UpdateCampaignResponse> {
     // Verificar se a campanha existe
     const existingCampaign = await this.campaignRepository.findById(id)
     if (!existingCampaign) {
@@ -65,7 +71,10 @@ export class UpdateCampaignUseCaseImpl implements UpdateCampaignUseCase {
 
     // Validar e processar nome
     if (request.name !== undefined) {
-      if (typeof request.name !== 'string' || request.name.trim().length === 0) {
+      if (
+        typeof request.name !== 'string' ||
+        request.name.trim().length === 0
+      ) {
         throw new Error('Campaign name is required')
       }
 
@@ -120,8 +129,14 @@ export class UpdateCampaignUseCaseImpl implements UpdateCampaignUseCase {
     }
 
     // Validar se minLives <= maxLives (considerando valores existentes)
-    const finalMinLives = request.minLives !== undefined ? request.minLives : existingCampaign.minLives
-    const finalMaxLives = request.maxLives !== undefined ? request.maxLives : existingCampaign.maxLives
+    const finalMinLives =
+      request.minLives !== undefined
+        ? request.minLives
+        : existingCampaign.minLives
+    const finalMaxLives =
+      request.maxLives !== undefined
+        ? request.maxLives
+        : existingCampaign.maxLives
 
     if (finalMinLives > finalMaxLives) {
       throw new Error('Minimum lives cannot be greater than maximum lives')
@@ -170,7 +185,10 @@ export class UpdateCampaignUseCaseImpl implements UpdateCampaignUseCase {
       updateParams.isDefault = request.isDefault
     }
 
-    const updatedCampaign = await this.campaignRepository.update(id, updateParams)
+    const updatedCampaign = await this.campaignRepository.update(
+      id,
+      updateParams
+    )
 
     return {
       id: updatedCampaign.id.toString(),

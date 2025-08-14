@@ -36,7 +36,7 @@ describe('Update Campaign Integration Tests', () => {
   // Helper function para criar uma campanha de teste
   const createTestCampaign = async (customPayload = {}) => {
     const payload = { ...getValidCampaignPayload(), ...customPayload }
-    
+
     const response = await app.inject({
       method: 'POST',
       url: '/api/campaigns',
@@ -135,8 +135,12 @@ describe('Update Campaign Integration Tests', () => {
       expect(updatedCampaign?.value).toBe(updatePayload.value)
       expect(updatedCampaign?.minLives).toBe(updatePayload.minLives)
       expect(updatedCampaign?.maxLives).toBe(updatePayload.maxLives)
-      expect(updatedCampaign?.paymentMethod).toEqual(updatePayload.paymentMethod)
-      expect(updatedCampaign?.accommodation).toEqual(updatePayload.accommodation)
+      expect(updatedCampaign?.paymentMethod).toEqual(
+        updatePayload.paymentMethod
+      )
+      expect(updatedCampaign?.accommodation).toEqual(
+        updatePayload.accommodation
+      )
       expect(updatedCampaign?.typeProduct).toEqual(updatePayload.typeProduct)
       expect(updatedCampaign?.obstetrics).toEqual(updatePayload.obstetrics)
     })
@@ -204,7 +208,9 @@ describe('Update Campaign Integration Tests', () => {
 
       const body = JSON.parse(response.body)
       expect(body.success).toBe(false)
-      expect(body.message).toContain('body must NOT have fewer than 1 properties')
+      expect(body.message).toContain(
+        'body must NOT have fewer than 1 properties'
+      )
     })
 
     it('should return 400 when name is empty string', async () => {
@@ -225,7 +231,9 @@ describe('Update Campaign Integration Tests', () => {
 
       const body = JSON.parse(response.body)
       expect(body.success).toBe(false)
-      expect(body.message).toContain('body/name must NOT have fewer than 1 characters')
+      expect(body.message).toContain(
+        'body/name must NOT have fewer than 1 characters'
+      )
     })
 
     it('should return 400 when minLives is zero or negative', async () => {
@@ -297,7 +305,9 @@ describe('Update Campaign Integration Tests', () => {
 
       const body = JSON.parse(response.body)
       expect(body.success).toBe(false)
-      expect(body.message).toContain('body/plans must NOT have fewer than 1 items')
+      expect(body.message).toContain(
+        'body/plans must NOT have fewer than 1 items'
+      )
     })
   })
 
@@ -365,7 +375,9 @@ describe('Update Campaign Integration Tests', () => {
       expect(response.statusCode).toBe(400)
 
       const body = JSON.parse(response.body)
-      expect(body.message).toContain('body/name must NOT have more than 255 characters')
+      expect(body.message).toContain(
+        'body/name must NOT have more than 255 characters'
+      )
     })
 
     it('should trim whitespace from campaign name', async () => {
@@ -405,7 +417,9 @@ describe('Update Campaign Integration Tests', () => {
       expect(response.statusCode).toBe(400)
 
       const body = JSON.parse(response.body)
-      expect(body.message).toContain('body/startDate must match format "date-time"')
+      expect(body.message).toContain(
+        'body/startDate must match format "date-time"'
+      )
     })
 
     it('should return 400 when end date is invalid format', async () => {
@@ -425,7 +439,9 @@ describe('Update Campaign Integration Tests', () => {
       expect(response.statusCode).toBe(400)
 
       const body = JSON.parse(response.body)
-      expect(body.message).toContain('body/endDate must match format "date-time"')
+      expect(body.message).toContain(
+        'body/endDate must match format "date-time"'
+      )
     })
 
     it('should return 400 when new start date is after existing end date', async () => {
@@ -481,7 +497,7 @@ describe('Update Campaign Integration Tests', () => {
       })
 
       const updatePayload = {
-        minLives: 15, 
+        minLives: 15,
       }
 
       const response = await app.inject({
@@ -494,7 +510,9 @@ describe('Update Campaign Integration Tests', () => {
       expect(response.statusCode).toBe(400)
 
       const body = JSON.parse(response.body)
-      expect(body.message).toContain('Minimum lives cannot be greater than maximum lives')
+      expect(body.message).toContain(
+        'Minimum lives cannot be greater than maximum lives'
+      )
     })
 
     it('should return 400 when new maxLives is less than existing minLives', async () => {
@@ -517,7 +535,9 @@ describe('Update Campaign Integration Tests', () => {
       expect(response.statusCode).toBe(400)
 
       const body = JSON.parse(response.body)
-      expect(body.message).toContain('Minimum lives cannot be greater than maximum lives')
+      expect(body.message).toContain(
+        'Minimum lives cannot be greater than maximum lives'
+      )
     })
 
     it('should return 400 when plans contains negative numbers', async () => {

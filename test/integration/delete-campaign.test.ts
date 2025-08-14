@@ -35,12 +35,12 @@ describe('Delete Campaign Integration Tests', () => {
     paymentMethod: ['PIX', 'CREDITCARD'],
     accommodation: ['APARTMENT'],
     typeProduct: ['withParticipation'],
-    obstetrics: ['withObstetric']
+    obstetrics: ['withObstetric'],
   })
 
   const createTestCampaign = async (customPayload = {}) => {
     const payload = { ...getValidCampaignPayload(), ...customPayload }
-    
+
     const response = await app.inject({
       method: 'POST',
       url: '/api/campaigns',
@@ -121,14 +121,13 @@ describe('Delete Campaign Integration Tests', () => {
       })
 
       expect(body.data.deletedAt).toBeTruthy()
-      
+
       expect(new Date(body.data.updatedAt).getTime()).toBeGreaterThan(
         new Date(createdCampaign.updatedAt).getTime()
       )
     })
   })
 
- 
   describe('DELETE /api/campaigns/:id - Client Error Cases (4xx)', () => {
     it('should return 401 when no authorization header is provided', async () => {
       const response = await app.inject({
@@ -336,10 +335,10 @@ describe('Delete Campaign Integration Tests', () => {
   describe('DELETE /api/campaigns/:id - Integration Tests', () => {
     it('should maintain data integrity when deleting default campaign', async () => {
       const defaultCampaign = await createTestCampaign({ isDefault: true })
-      
-      const normalCampaign = await createTestCampaign({ 
+
+      const normalCampaign = await createTestCampaign({
         name: 'Normal Campaign',
-        isDefault: false 
+        isDefault: false,
       })
 
       const response = await app.inject({
@@ -384,7 +383,7 @@ describe('Delete Campaign Integration Tests', () => {
       })
 
       expect(newCampaignResponse.statusCode).toBe(201)
-      
+
       const newCampaignBody = JSON.parse(newCampaignResponse.body)
       expect(newCampaignBody.data.name).toBe(campaign.name)
       expect(newCampaignBody.data.id).not.toBe(campaign.id)
@@ -408,6 +407,4 @@ describe('Delete Campaign Integration Tests', () => {
       })
     })
   })
-
 })
-

@@ -119,6 +119,7 @@ export class PrismaCampaignRepository implements CampaignRepository {
       })
       return campaign
     } catch (error) {
+      console.error('Error finding campaign by id', error)
       return null
     }
   }
@@ -138,10 +139,18 @@ export class PrismaCampaignRepository implements CampaignRepository {
         ...(params.maxLives !== undefined && { maxLives: params.maxLives }),
         ...(params.plans !== undefined && { plans: params.plans }),
         ...(params.value !== undefined && { value: params.value }),
-        ...(params.paymentMethod !== undefined && { paymentMethod: params.paymentMethod }),
-        ...(params.accommodation !== undefined && { accommodation: params.accommodation }),
-        ...(params.typeProduct !== undefined && { typeProduct: params.typeProduct }),
-        ...(params.obstetrics !== undefined && { obstetrics: params.obstetrics }),
+        ...(params.paymentMethod !== undefined && {
+          paymentMethod: params.paymentMethod,
+        }),
+        ...(params.accommodation !== undefined && {
+          accommodation: params.accommodation,
+        }),
+        ...(params.typeProduct !== undefined && {
+          typeProduct: params.typeProduct,
+        }),
+        ...(params.obstetrics !== undefined && {
+          obstetrics: params.obstetrics,
+        }),
       },
     })
   }

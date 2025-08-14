@@ -43,7 +43,9 @@ export interface CreateCampaignUseCase {
 export class CreateCampaignUseCaseImpl implements CreateCampaignUseCase {
   constructor(private readonly campaignRepository: CampaignRepository) {}
 
-  async execute(request: CreateCampaignRequest): Promise<CreateCampaignResponse> {
+  async execute(
+    request: CreateCampaignRequest
+  ): Promise<CreateCampaignResponse> {
     // Validar datas
     const startDate = new Date(request.startDate)
     const endDate = new Date(request.endDate)
