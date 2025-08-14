@@ -6,10 +6,10 @@ name: Tests
 on:
   # Executa em push para qualquer branch
   push:
-    branches: [ "*" ]
+    branches: ['*']
   # Executa em pull requests para qualquer branch
   pull_request:
-    branches: [ "*" ]
+    branches: ['*']
 
 # Configurações globais
 env:
@@ -17,7 +17,8 @@ env:
   NODE_VERSION: '20'
   # Variáveis de ambiente para os testes
   NODE_ENV: test
-  DATABASE_URL: "mysql://campaign_user:campaign_password@localhost:3306/campaigns"
+  BEARER_AUTH_KEY=1234567890
+  DATABASE_URL: 'mysql://campaign_user:campaign_password@localhost:3306/campaigns'
 
 # Jobs do workflow
 jobs:
@@ -25,7 +26,7 @@ jobs:
   tests:
     # Sistema operacional: Ubuntu (conforme especificado)
     runs-on: ubuntu-latest
-    
+
     # Serviços necessários para os testes (MySQL)
     services:
       mysql:
@@ -51,7 +52,7 @@ jobs:
       # 1. Fazer checkout do código do repositório
       - name: 📥 Checkout do código
         uses: actions/checkout@v4
-        
+
       # 2. Configurar Node.js com cache automático do npm
       - name: 🔧 Configurar Node.js
         uses: actions/setup-node@v4
@@ -59,35 +60,35 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           # Cache automático das dependências do npm
           cache: 'npm'
-          
+
       # 3. Instalar dependências do projeto
       - name: 📦 Instalar dependências
         run: |
           echo "🔄 Instalando dependências do projeto..."
           npm ci
           echo "✅ Dependências instaladas com sucesso!"
-          
+
       # 4. Gerar cliente Prisma
       - name: 🗄️ Gerar cliente Prisma
         run: |
           echo "🔧 Gerando cliente Prisma..."
           npm run db:generate
           echo "✅ Cliente Prisma gerado com sucesso!"
-          
+
       # 5. Executar migrations do banco de dados
       - name: 🚀 Executar migrations do banco
         run: |
           echo "🔄 Executando migrations do banco de dados..."
           npm run db:migrate:deploy
           echo "✅ Migrations executadas com sucesso!"
-          
+
       # 6. Executar testes automatizados
       - name: 🧪 Executar testes automatizados
         run: |
           echo "🚀 Iniciando execução dos testes..."
           npm run test
           echo "🎉 Testes executados com sucesso!"
-          
+
       # 7. Upload dos resultados em caso de falha (opcional)
       - name: 📊 Upload de logs em caso de falha
         if: failure()
