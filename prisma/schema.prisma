@@ -22,6 +22,7 @@ model Campaign {
   value     Int      @db.TinyInt // Porcentagem de 1 a 100
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
 
   @@map("campaigns")
 }

@@ -65,3 +65,11 @@ export interface PaginationMeta {
   hasNextPage: boolean
   hasPreviousPage: boolean
 }
+
+export interface DeleteCampaignParams {
+  id: string
+}
+
+export type DeleteCampaignRequest = FastifyRequest<{
+  Params: DeleteCampaignParams
+}>

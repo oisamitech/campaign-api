@@ -413,3 +413,74 @@ export const updateCampaignSchema: FastifySchema = {
     },
   },
 }
+
+export const deleteCampaignParamsSchema = {
+  type: 'object',
+  properties: {
+    id: {
+      type: 'string',
+      description: 'Campaign ID',
+      pattern: '^[0-9]+$',
+    },
+  },
+  required: ['id'],
+  additionalProperties: false,
+}
+
+export const deleteCampaignResponseSchema = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether the operation was successful',
+    },
+    data: {
+      type: 'object',
+      properties: {
+        ...campaignSchema.properties,
+        deletedAt: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Deletion date',
+        },
+      },
+      required: [
+        ...campaignSchema.required,
+        'deletedAt',
+      ],
+      additionalProperties: false,
+    },
+  },
+  required: ['success', 'data'],
+  additionalProperties: false,
+}
+
+export const deleteCampaignSchema: FastifySchema = {
+  description: 'Delete a campaign (soft delete)',
+  tags: ['Campaigns'],
+  summary: 'Delete campaign',
+  security: [
+    {
+      bearerAuth: [],
+    },
+  ],
+  params: deleteCampaignParamsSchema,
+  response: {
+    200: {
+      description: 'Campaign deleted successfully',
+      ...deleteCampaignResponseSchema,
+    },
+    401: {
+      description: 'Unauthorized - Bearer token required or invalid',
+      ...errorResponseSchema,
+    },
+    404: {
+      description: 'Campaign not found',
+      ...errorResponseSchema,
+    },
+    500: {
+      description: 'Internal server error',
+      ...errorResponseSchema,
+    },
+  },
+}

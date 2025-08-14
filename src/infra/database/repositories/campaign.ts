@@ -12,6 +12,7 @@ export interface Campaign {
   value: number
   createdAt: Date
   updatedAt: Date
+  deletedAt?: Date | null
 }
 
 export interface PaginationParams {
@@ -47,6 +48,7 @@ export interface CampaignRepository {
   create(params: CreateCampaignParams): Promise<Campaign>
   findById(id: string): Promise<Campaign | null>
   update(id: string, params: UpdateCampaignParams): Promise<Campaign>
+  delete(id: string): Promise<Campaign>
 }
 
 export class PrismaCampaignRepository implements CampaignRepository {
@@ -57,6 +59,9 @@ export class PrismaCampaignRepository implements CampaignRepository {
     const offset = (page - 1) * limit
 
     return this.prisma.campaign.findMany({
+      where: {
+        deletedAt: null,
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -66,7 +71,11 @@ export class PrismaCampaignRepository implements CampaignRepository {
   }
 
   async count(): Promise<number> {
-    return this.prisma.campaign.count()
+    return this.prisma.campaign.count({
+      where: {
+        deletedAt: null,
+      },
+    })
   }
 
   async create(params: CreateCampaignParams): Promise<Campaign> {
@@ -89,6 +98,7 @@ export class PrismaCampaignRepository implements CampaignRepository {
       const campaign = await this.prisma.campaign.findUnique({
         where: {
           id: BigInt(id),
+          deletedAt: null,
         },
       })
       return campaign
@@ -102,6 +112,7 @@ export class PrismaCampaignRepository implements CampaignRepository {
     return this.prisma.campaign.update({
       where: {
         id: BigInt(id),
+        deletedAt: null,
       },
       data: {
         ...(params.name !== undefined && { name: params.name }),
@@ -112,6 +123,18 @@ export class PrismaCampaignRepository implements CampaignRepository {
         ...(params.maxLives !== undefined && { maxLives: params.maxLives }),
         ...(params.plans !== undefined && { plans: params.plans }),
         ...(params.value !== undefined && { value: params.value }),
+      },
+    })
+  }
+
+  async delete(id: string): Promise<Campaign> {
+    return this.prisma.campaign.update({
+      where: {
+        id: BigInt(id),
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: new Date(),
       },
     })
   }
