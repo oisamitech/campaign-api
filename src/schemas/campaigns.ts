@@ -270,6 +270,85 @@ export const listCampaignsSchema: FastifySchema = {
   },
 }
 
+export const updateCampaignParamsSchema = {
+  type: 'object',
+  properties: {
+    id: {
+      type: 'string',
+      description: 'Campaign ID',
+      pattern: '^[0-9]+$',
+    },
+  },
+  required: ['id'],
+  additionalProperties: false,
+}
+
+export const updateCampaignBodySchema = {
+  type: 'object',
+  properties: {
+    name: {
+      type: 'string',
+      description: 'Campaign name (optional, max 255 characters)',
+      minLength: 1,
+      maxLength: 255,
+    },
+    startDate: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Campaign start date (ISO format, optional)',
+    },
+    endDate: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Campaign end date (ISO format, optional)',
+    },
+    isDefault: {
+      type: 'boolean',
+      description: 'Whether this is the default campaign (optional)',
+    },
+    minLives: {
+      type: 'number',
+      description: 'Minimum number of lives (optional, must be positive)',
+      minimum: 1,
+    },
+    maxLives: {
+      type: 'number',
+      description: 'Maximum number of lives (optional, must be positive)',
+      minimum: 1,
+    },
+    plans: {
+      type: 'array',
+      description: 'Array of available plans (optional, positive numbers)',
+      items: {
+        type: 'number',
+        minimum: 1,
+      },
+      minItems: 1,
+    },
+    value: {
+      type: 'number',
+      description: 'Campaign value (optional, percentage from 1 to 100)',
+      minimum: 1,
+      maximum: 100,
+    },
+  },
+  additionalProperties: false,
+  minProperties: 1, // Pelo menos um campo deve ser fornecido
+}
+
+export const updateCampaignResponseSchema = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether the operation was successful',
+    },
+    data: campaignSchema,
+  },
+  required: ['success', 'data'],
+  additionalProperties: false,
+}
+
 export const createCampaignSchema: FastifySchema = {
   description: 'Create a new campaign',
   tags: ['Campaigns'],
@@ -291,6 +370,41 @@ export const createCampaignSchema: FastifySchema = {
     },
     401: {
       description: 'Unauthorized - Bearer token required or invalid',
+      ...errorResponseSchema,
+    },
+    500: {
+      description: 'Internal server error',
+      ...errorResponseSchema,
+    },
+  },
+}
+
+export const updateCampaignSchema: FastifySchema = {
+  description: 'Update an existing campaign',
+  tags: ['Campaigns'],
+  summary: 'Update campaign',
+  security: [
+    {
+      bearerAuth: [],
+    },
+  ],
+  params: updateCampaignParamsSchema,
+  body: updateCampaignBodySchema,
+  response: {
+    200: {
+      description: 'Campaign updated successfully',
+      ...updateCampaignResponseSchema,
+    },
+    400: {
+      description: 'Invalid request data',
+      ...errorResponseSchema,
+    },
+    401: {
+      description: 'Unauthorized - Bearer token required or invalid',
+      ...errorResponseSchema,
+    },
+    404: {
+      description: 'Campaign not found',
       ...errorResponseSchema,
     },
     500: {

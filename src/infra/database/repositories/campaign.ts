@@ -30,10 +30,23 @@ export interface CreateCampaignParams {
   value: number
 }
 
+export interface UpdateCampaignParams {
+  name?: string
+  startDate?: Date
+  endDate?: Date
+  isDefault?: boolean
+  minLives?: number
+  maxLives?: number
+  plans?: number[]
+  value?: number
+}
+
 export interface CampaignRepository {
   findManyPaginated(params: PaginationParams): Promise<Campaign[]>
   count(): Promise<number>
   create(params: CreateCampaignParams): Promise<Campaign>
+  findById(id: string): Promise<Campaign | null>
+  update(id: string, params: UpdateCampaignParams): Promise<Campaign>
 }
 
 export class PrismaCampaignRepository implements CampaignRepository {
@@ -67,6 +80,38 @@ export class PrismaCampaignRepository implements CampaignRepository {
         maxLives: params.maxLives,
         plans: params.plans,
         value: params.value,
+      },
+    })
+  }
+
+  async findById(id: string): Promise<Campaign | null> {
+    try {
+      const campaign = await this.prisma.campaign.findUnique({
+        where: {
+          id: BigInt(id),
+        },
+      })
+      return campaign
+    } catch (error) {
+      // Se o ID não for um número válido, retorna null
+      return null
+    }
+  }
+
+  async update(id: string, params: UpdateCampaignParams): Promise<Campaign> {
+    return this.prisma.campaign.update({
+      where: {
+        id: BigInt(id),
+      },
+      data: {
+        ...(params.name !== undefined && { name: params.name }),
+        ...(params.startDate !== undefined && { startDate: params.startDate }),
+        ...(params.endDate !== undefined && { endDate: params.endDate }),
+        ...(params.isDefault !== undefined && { isDefault: params.isDefault }),
+        ...(params.minLives !== undefined && { minLives: params.minLives }),
+        ...(params.maxLives !== undefined && { maxLives: params.maxLives }),
+        ...(params.plans !== undefined && { plans: params.plans }),
+        ...(params.value !== undefined && { value: params.value }),
       },
     })
   }
