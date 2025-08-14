@@ -44,7 +44,6 @@ export class DeleteCampaignUseCaseImpl implements DeleteCampaignUseCase {
 
     return {
       id: deletedCampaign.id.toString(),
-      name: deletedCampaign.name,
       startDate: deletedCampaign.startDate,
       endDate: deletedCampaign.endDate,
       isDefault: deletedCampaign.isDefault,
