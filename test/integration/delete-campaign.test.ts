@@ -179,7 +179,7 @@ describe('Delete Campaign Integration Tests', () => {
       expect(body).toMatchObject({
         statusCode: 400,
         success: false,
-        error: 'Validation Error'
+        error: 'Validation Error',
       })
     })
 
