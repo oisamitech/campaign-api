@@ -20,3 +20,9 @@ export {
   type UpdateCampaignRequest,
   type UpdateCampaignResponse,
 } from './update-campaign.js'
+
+export {
+  DeleteCampaignUseCase,
+  DeleteCampaignUseCaseImpl,
+  type DeleteCampaignResponse,
+} from './delete-campaign.js'
