@@ -11,18 +11,22 @@ datasource db {
 }
 
 model Campaign {
-  id        BigInt   @id @default(autoincrement())
-  name      String   @db.VarChar(255)
-  startDate DateTime
-  endDate   DateTime
-  isDefault Boolean  @default(false)
-  minLives  Int
-  maxLives  Int
-  plans     Json     // Array de números
-  value     Int      @db.TinyInt // Porcentagem de 1 a 100
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
+  id            BigInt   @id @default(autoincrement())
+  name          String   @db.VarChar(255)
+  startDate     DateTime
+  endDate       DateTime
+  isDefault     Boolean  @default(false)
+  minLives      Int
+  maxLives      Int
+  plans         Json     // Array de números
+  value         Int      @db.TinyInt // Porcentagem de 1 a 100
+  paymentMethod Json    
+  accommodation Json     
+  typeProduct   Json     
+  obstetrics    Json     
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
 
   @@map("campaigns")
 }

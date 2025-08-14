@@ -17,7 +17,7 @@ describe('Update Campaign Integration Tests', () => {
     }
   }
 
-  // Helper function para criar payload válido de campanha para criação
+  // Atualizar o payload válido:
   const getValidCampaignPayload = () => ({
     name: 'Test Campaign - Update',
     startDate: '2024-06-01T00:00:00.000Z',
@@ -27,6 +27,10 @@ describe('Update Campaign Integration Tests', () => {
     plans: [1, 2, 3],
     value: 15,
     isDefault: false,
+    paymentMethod: ['PIX', 'CREDITCARD'],
+    accommodation: ['APARTMENT'],
+    typeProduct: ['withParticipation'],
+    obstetrics: ['withObstetric'],
   })
 
   // Helper function para criar uma campanha de teste
@@ -93,6 +97,10 @@ describe('Update Campaign Integration Tests', () => {
         value: 25,
         minLives: 10,
         maxLives: 30,
+        paymentMethod: ['PIX', 'BANKSLIP'],
+        accommodation: ['INFIRMARY'],
+        typeProduct: ['withoutParticipation'],
+        obstetrics: ['withoutObstetric'],
       }
 
       const response = await app.inject({
@@ -113,6 +121,10 @@ describe('Update Campaign Integration Tests', () => {
       expect(body.data.minLives).toBe(updatePayload.minLives)
       expect(body.data.maxLives).toBe(updatePayload.maxLives)
       expect(body.data.updatedAt).toBeDefined()
+      expect(body.data.paymentMethod).toEqual(updatePayload.paymentMethod)
+      expect(body.data.accommodation).toEqual(updatePayload.accommodation)
+      expect(body.data.typeProduct).toEqual(updatePayload.typeProduct)
+      expect(body.data.obstetrics).toEqual(updatePayload.obstetrics)
 
       // Verificar se foi realmente atualizado no banco
       const updatedCampaign = await prisma.campaign.findUnique({
@@ -123,6 +135,10 @@ describe('Update Campaign Integration Tests', () => {
       expect(updatedCampaign?.value).toBe(updatePayload.value)
       expect(updatedCampaign?.minLives).toBe(updatePayload.minLives)
       expect(updatedCampaign?.maxLives).toBe(updatePayload.maxLives)
+      expect(updatedCampaign?.paymentMethod).toEqual(updatePayload.paymentMethod)
+      expect(updatedCampaign?.accommodation).toEqual(updatePayload.accommodation)
+      expect(updatedCampaign?.typeProduct).toEqual(updatePayload.typeProduct)
+      expect(updatedCampaign?.obstetrics).toEqual(updatePayload.obstetrics)
     })
 
     it('should update only one field and keep others unchanged', async () => {

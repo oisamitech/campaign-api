@@ -32,6 +32,10 @@ describe('Delete Campaign Integration Tests', () => {
     plans: [1, 2, 3],
     value: 15,
     isDefault: false,
+    paymentMethod: ['PIX', 'CREDITCARD'],
+    accommodation: ['APARTMENT'],
+    typeProduct: ['withParticipation'],
+    obstetrics: ['withObstetric']
   })
 
   const createTestCampaign = async (customPayload = {}) => {
@@ -107,6 +111,10 @@ describe('Delete Campaign Integration Tests', () => {
           plans: createdCampaign.plans,
           value: createdCampaign.value,
           createdAt: createdCampaign.createdAt,
+          paymentMethod: createdCampaign.paymentMethod,
+          accommodation: createdCampaign.accommodation,
+          typeProduct: createdCampaign.typeProduct,
+          obstetrics: createdCampaign.obstetrics,
           updatedAt: expect.any(String),
           deletedAt: expect.any(String),
         },

@@ -14,6 +14,10 @@ export interface CreateCampaignBody {
   maxLives: number
   plans: number[]
   value: number
+  paymentMethod: string[]
+  accommodation: string[]
+  typeProduct: string[]
+  obstetrics: string[]
 }
 
 export interface UpdateCampaignParams {
@@ -29,6 +33,14 @@ export interface UpdateCampaignBody {
   maxLives?: number
   plans?: number[]
   value?: number
+  paymentMethod?: string[]
+  accommodation?: string[]
+  typeProduct?: string[]
+  obstetrics?: string[]
+}
+
+export interface DeleteCampaignParams {
+  id: string
 }
 
 export interface ApiResponse<T = any> {
@@ -52,6 +64,10 @@ export type UpdateCampaignRequest = FastifyRequest<{
   Body: UpdateCampaignBody
 }>
 
+export type DeleteCampaignRequest = FastifyRequest<{
+  Params: DeleteCampaignParams
+}>
+
 export interface PaginationQuery {
   page: number
   limit: number
@@ -65,11 +81,3 @@ export interface PaginationMeta {
   hasNextPage: boolean
   hasPreviousPage: boolean
 }
-
-export interface DeleteCampaignParams {
-  id: string
-}
-
-export type DeleteCampaignRequest = FastifyRequest<{
-  Params: DeleteCampaignParams
-}>

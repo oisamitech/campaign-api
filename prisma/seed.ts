@@ -19,6 +19,10 @@ async function main() {
       maxLives: 20,
       plans: [1, 2, 3, 4, 5],
       value: 25, // 25%
+      paymentMethod: ['PIX', 'CREDITCARD'],
+      accommodation: ['APARTMENT'],
+      typeProduct: ['withParticipation'],
+      obstetrics: ['withObstetric'],
     },
   })
 
@@ -35,6 +39,10 @@ async function main() {
       maxLives: 15,
       plans: [1, 2, 3],
       value: 15, // 15%
+      paymentMethod: ['PIX', 'BANKSLIP'],
+      accommodation: ['INFIRMARY'],
+      typeProduct: ['withoutParticipation'],
+      obstetrics: ['withoutObstetric'],
     },
   })
 
@@ -51,6 +59,10 @@ async function main() {
       maxLives: 30,
       plans: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       value: 50, // 50%
+      paymentMethod: ['PIX', 'CREDITCARD', 'BANKSLIP'],
+      accommodation: ['APARTMENT', 'INFIRMARY'],
+      typeProduct: ['withParticipation', 'withoutParticipation'],
+      obstetrics: ['withObstetric', 'withoutObstetric'],
     },
   })
 
