@@ -81,13 +81,10 @@ describe('Database Integration Tests with Fastify', () => {
       expect(response.statusCode).toBe(200)
 
       const body = JSON.parse(response.body)
-
-      console.log('--------------------------------', response.body)
-      // console.log(body)
-      // expect(body.success).toBe(true)
-      // expect(body.data).toBeDefined()
-      // expect(Array.isArray(body.data)).toBe(true)
-      // expect(body.meta).toBeDefined()
+      expect(body.success).toBe(true)
+      expect(body.data).toBeDefined()
+      expect(Array.isArray(body.data)).toBe(true)
+      expect(body.meta).toBeDefined()
     })
   })
 
