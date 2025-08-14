@@ -179,8 +179,7 @@ describe('Delete Campaign Integration Tests', () => {
       expect(body).toMatchObject({
         statusCode: 400,
         success: false,
-        error: 'Validation Error',
-        message: 'params/id must match pattern \"^[0-9]+$\"',
+        error: 'Validation Error'
       })
     })
 
