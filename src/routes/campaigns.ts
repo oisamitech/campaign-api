@@ -1,23 +1,56 @@
-import { FastifyInstance, FastifyReply } from 'fastify'
+import { FastifyInstance } from 'fastify'
 import {
   ListCampaignsUseCaseImpl,
+  CreateCampaignUseCaseImpl,
+  UpdateCampaignUseCaseImpl,
+  DeleteCampaignUseCaseImpl,
+} from '../usecases/index.js'
+import {
+  PrismaCampaignRepository,
+  PrismaRuleRepository,
   PaginationParams,
-} from '../usecases/list-campaigns.js'
+} from '../infra/database/repositories/index.js'
 import { prisma } from '../infra/database/prisma.js'
-import { listCampaignsSchema } from '../schemas/campaigns.js'
-import { ListCampaignsRequest } from '../types/routes.js'
+import {
+  listCampaignsSchema,
+  createCampaignSchema,
+  updateCampaignSchema,
+  deleteCampaignSchema,
+} from '../schemas/campaigns.js'
+import {
+  ListCampaignsQuery,
+  CreateCampaignBody,
+  UpdateCampaignParams,
+  UpdateCampaignBody,
+  DeleteCampaignParams,
+} from '../types/routes.js'
 
 export async function campaignRoutes(fastify: FastifyInstance) {
-  const listCampaignsUseCase = new ListCampaignsUseCaseImpl(prisma)
+  const campaignRepository = new PrismaCampaignRepository(prisma)
+  const ruleRepository = new PrismaRuleRepository(prisma)
+
+  const listCampaignsUseCase = new ListCampaignsUseCaseImpl(campaignRepository)
+  const createCampaignUseCase = new CreateCampaignUseCaseImpl(
+    campaignRepository,
+    ruleRepository
+  )
+  const updateCampaignUseCase = new UpdateCampaignUseCaseImpl(
+    campaignRepository
+  )
+  const deleteCampaignUseCase = new DeleteCampaignUseCaseImpl(
+    campaignRepository,
+    ruleRepository
+  )
 
   fastify.get(
     '/campaigns',
     {
       schema: listCampaignsSchema,
+      preHandler: [fastify.verifyBearerAuth!],
     },
-    async (request: ListCampaignsRequest, reply: FastifyReply) => {
+    async (request, reply) => {
       try {
-        const { page, limit } = request.query
+        const { page, limit } = request.query as ListCampaignsQuery
 
         const paginationParams: PaginationParams | undefined =
           page || limit
@@ -35,11 +68,110 @@ export async function campaignRoutes(fastify: FastifyInstance) {
         })
       } catch (error: unknown) {
         console.error('Error listing campaigns:', error)
-
         return reply.status(500).send({
+          statusCode: 500,
           success: false,
           error: 'Internal server error',
           message: 'Failed to list campaigns',
+        })
+      }
+    }
+  )
+
+  fastify.post(
+    '/campaigns',
+    {
+      schema: createCampaignSchema,
+      preHandler: [fastify.verifyBearerAuth!],
+    },
+    async (request, reply) => {
+      try {
+        const body = request.body as CreateCampaignBody
+        const result = await createCampaignUseCase.execute(body)
+
+        return reply.status(201).send({
+          success: true,
+          data: result,
+        })
+      } catch (error: unknown) {
+        console.error('Error creating campaign:', error)
+        return reply.status(500).send({
+          statusCode: 500,
+          success: false,
+          error: 'Internal server error',
+          message: 'Failed to create campaign',
+        })
+      }
+    }
+  )
+
+  fastify.patch(
+    '/campaigns/:id',
+    {
+      schema: updateCampaignSchema,
+      preHandler: [fastify.verifyBearerAuth!],
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params as UpdateCampaignParams
+        const body = request.body as UpdateCampaignBody
+
+        const result = await updateCampaignUseCase.execute(id, body)
+
+        return reply.status(200).send({
+          success: true,
+          data: result,
+        })
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === 'Campaign not found') {
+          return reply.status(404).send({
+            statusCode: 404,
+            success: false,
+            error: 'Not Found',
+            message: 'Campaign not found',
+          })
+        }
+
+        return reply.status(500).send({
+          statusCode: 500,
+          success: false,
+          error: 'Internal server error',
+          message: 'Failed to update campaign',
+        })
+      }
+    }
+  )
+
+  fastify.delete(
+    '/campaigns/:id',
+    {
+      schema: deleteCampaignSchema,
+      preHandler: [fastify.verifyBearerAuth!],
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params as DeleteCampaignParams
+        const result = await deleteCampaignUseCase.execute(id)
+
+        return reply.status(200).send({
+          success: true,
+          data: result,
+        })
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === 'Campaign not found') {
+          return reply.status(404).send({
+            statusCode: 404,
+            success: false,
+            error: 'Not Found',
+            message: 'Campaign not found',
+          })
+        }
+
+        return reply.status(500).send({
+          statusCode: 500,
+          success: false,
+          error: 'Internal server error',
+          message: 'Failed to delete campaign',
         })
       }
     }

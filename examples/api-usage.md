@@ -1,12 +1,29 @@
 # Exemplos de Uso da Campaign API
 
+## Autenticação
+
+A API usa autenticação Bearer Token. Todas as rotas protegidas requerem o header `Authorization` com o formato:
+
+```
+Authorization: Bearer <seu-token-aqui>
+```
+
+### Configuração do Token
+
+O token deve ser configurado na variável de ambiente `BEARER_AUTH_KEY`. Você pode configurar múltiplos tokens separando-os por vírgula:
+
+```bash
+BEARER_AUTH_KEY=token1,token2,token3
+```
+
 ## Exemplos com cURL
 
 ### 1. Listar Primeira Página (Padrão)
 
 ```bash
-curl -X GET "http://localhost:3000/campaigns" \
-  -H "Accept: application/json"
+curl -X GET "http://localhost:3000/api/campaigns" \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer seu-token-aqui"
 ```
 
 **Resposta esperada:**
@@ -40,11 +57,49 @@ curl -X GET "http://localhost:3000/campaigns" \
 }
 ```
 
-### 2. Listar com Paginação Personalizada
+### 2. Tentativa de Acesso sem Token
 
 ```bash
-curl -X GET "http://localhost:3000/campaigns?page=2&limit=5" \
+curl -X GET "http://localhost:3000/api/campaigns" \
   -H "Accept: application/json"
+```
+
+**Resposta esperada (401 Unauthorized):**
+
+```json
+{
+  "statusCode": 401,
+  "success": false,
+  "error": "Unauthorized",
+  "message": "Authentication required"
+}
+```
+
+### 3. Tentativa de Acesso com Token Inválido
+
+```bash
+curl -X GET "http://localhost:3000/api/campaigns" \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer token-invalido"
+```
+
+**Resposta esperada (401 Unauthorized):**
+
+```json
+{
+  "statusCode": 401,
+  "success": false,
+  "error": "Unauthorized",
+  "message": "Invalid token"
+}
+```
+
+### 4. Listar com Paginação Personalizada
+
+```bash
+curl -X GET "http://localhost:3000/api/campaigns?page=2&limit=5" \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer seu-token-aqui"
 ```
 
 **Resposta esperada:**
@@ -78,299 +133,56 @@ curl -X GET "http://localhost:3000/campaigns?page=2&limit=5" \
 }
 ```
 
-### 3. Listar com Limite Personalizado
+### 5. Health Check (Não Requer Autenticação)
 
 ```bash
-curl -X GET "http://localhost:3000/campaigns?limit=20" \
+curl -X GET "http://localhost:3000/api/health" \
   -H "Accept: application/json"
 ```
 
-### 4. Health Check
+**Resposta esperada:**
 
-```bash
-curl -X GET "http://localhost:3000/health" \
-  -H "Accept: application/json"
-```
-
-## Exemplos com JavaScript/Node.js
-
-### 1. Função para Listar Campanhas com Paginação
-
-```javascript
-async function listCampaigns(page = 1, limit = 10) {
-  try {
-    const response = await fetch(
-      `http://localhost:3000/campaigns?page=${page}&limit=${limit}`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error('Erro ao listar campanhas:', error)
-    throw error
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "uptime": 3600,
+  "environment": "development",
+  "version": "1.0.0",
+  "database": {
+    "status": "online",
+    "provider": "mysql",
+    "responseTime": "5ms"
   }
 }
-
-// Uso
-listCampaigns(1, 5)
-  .then(result => {
-    console.log('Campanhas:', result.data)
-    console.log('Metadados:', result.meta)
-  })
-  .catch(error => {
-    console.error('Erro:', error)
-  })
 ```
 
-### 2. Função para Navegar por Todas as Páginas
+## Códigos de Status HTTP
 
-```javascript
-async function getAllCampaigns(limit = 10) {
-  let allCampaigns = []
-  let currentPage = 1
-  let hasNextPage = true
+- **200 OK**: Requisição bem-sucedida
+- **400 Bad Request**: Erro de validação nos parâmetros
+- **401 Unauthorized**: Token de autenticação ausente ou inválido
+- **500 Internal Server Error**: Erro interno do servidor
 
-  while (hasNextPage) {
-    try {
-      const result = await listCampaigns(currentPage, limit)
+## Estrutura de Resposta de Erro
 
-      allCampaigns = allCampaigns.concat(result.data)
-      hasNextPage = result.meta.hasNextPage
-      currentPage++
+Todas as respostas de erro seguem o padrão:
 
-      console.log(
-        `Página ${result.meta.currentPage} carregada com ${result.data.length} campanhas`
-      )
-    } catch (error) {
-      console.error(`Erro ao carregar página ${currentPage}:`, error)
-      break
-    }
-  }
-
-  return allCampaigns
+```json
+{
+  "statusCode": 400,
+  "success": false,
+  "error": "Tipo do Erro",
+  "message": "Descrição detalhada do erro"
 }
-
-// Uso
-getAllCampaigns(20).then(campaigns => {
-  console.log(`Total de campanhas carregadas: ${campaigns.length}`)
-})
 ```
 
-### 3. Função para Buscar Campanhas com Filtros (Exemplo Futuro)
+## Documentação da API
 
-```javascript
-async function searchCampaigns(filters = {}, page = 1, limit = 10) {
-  try {
-    const queryParams = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-      ...filters,
-    })
-
-    const response = await fetch(
-      `http://localhost:3000/campaigns/search?${queryParams}`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error('Erro ao buscar campanhas:', error)
-    throw error
-  }
-}
-
-// Uso (quando implementado)
-searchCampaigns(
-  {
-    isDefault: true,
-    minValue: 10,
-  },
-  1,
-  20
-).then(result => {
-  console.log('Campanhas encontradas:', result.data)
-})
-```
-
-## Exemplos com Python
-
-### 1. Função para Listar Campanhas
-
-```python
-import requests
-import json
-
-def list_campaigns(page=1, limit=10):
-    try:
-        url = f"http://localhost:3000/campaigns"
-        params = {"page": page, "limit": limit}
-
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Erro ao listar campanhas: {e}")
-        raise
-
-# Uso
-try:
-    result = list_campaigns(page=1, limit=5)
-    print(f"Campanhas encontradas: {len(result['data'])}")
-    print(f"Total de páginas: {result['meta']['totalPages']}")
-
-    for campaign in result['data']:
-        print(f"- {campaign['name']} (ID: {campaign['id']})")
-
-except Exception as e:
-    print(f"Erro: {e}")
-```
-
-### 2. Função para Navegar por Todas as Páginas
-
-```python
-def get_all_campaigns(limit=10):
-    all_campaigns = []
-    current_page = 1
-    has_next_page = True
-
-    while has_next_page:
-        try:
-            result = list_campaigns(current_page, limit)
-
-            all_campaigns.extend(result['data'])
-            has_next_page = result['meta']['hasNextPage']
-            current_page += 1
-
-            print(f"Página {result['meta']['currentPage']} carregada com {len(result['data'])} campanhas")
-
-        except Exception as e:
-            print(f"Erro ao carregar página {current_page}: {e}")
-            break
-
-    return all_campaigns
-
-# Uso
-campaigns = get_all_campaigns(20)
-print(f"Total de campanhas carregadas: {len(campaigns)}")
-```
-
-## Exemplos com Postman
-
-### 1. Collection para Campaign API
-
-Crie uma nova collection no Postman com as seguintes requests:
-
-**Listar Campanhas (Padrão)**
-
-- Method: GET
-- URL: `http://localhost:3000/campaigns`
-
-**Listar Campanhas (Página 2)**
-
-- Method: GET
-- URL: `http://localhost:3000/campaigns?page=2&limit=5`
-
-**Listar Campanhas (Limite 20)**
-
-- Method: GET
-- URL: `http://localhost:3000/campaigns?limit=20`
-
-**Health Check**
-
-- Method: GET
-- URL: `http://localhost:3000/health`
-
-### 2. Variáveis de Ambiente
-
-Configure as seguintes variáveis no Postman:
+A documentação completa da API está disponível em:
 
 ```
-base_url: http://localhost:3000
-api_version: v1
+http://localhost:3000/documentation
 ```
 
-### 3. Testes Automatizados
-
-Adicione os seguintes testes no Postman:
-
-```javascript
-// Teste para verificar se a resposta tem a estrutura correta
-pm.test('Response has correct structure', function () {
-  const response = pm.response.json()
-
-  pm.expect(response).to.have.property('success')
-  pm.expect(response).to.have.property('data')
-  pm.expect(response).to.have.property('meta')
-
-  pm.expect(response.success).to.be.true
-  pm.expect(response.data).to.be.an('array')
-  pm.expect(response.meta).to.be.an('object')
-})
-
-// Teste para verificar metadados de paginação
-pm.test('Pagination metadata is correct', function () {
-  const response = pm.response.json()
-  const meta = response.meta
-
-  pm.expect(meta).to.have.property('currentPage')
-  pm.expect(meta).to.have.property('totalPages')
-  pm.expect(meta).to.have.property('totalItems')
-  pm.expect(meta).to.have.property('itemsPerPage')
-  pm.expect(meta).to.have.property('hasNextPage')
-  pm.expect(meta).to.have.property('hasPreviousPage')
-
-  pm.expect(meta.currentPage).to.be.a('number')
-  pm.expect(meta.totalPages).to.be.a('number')
-  pm.expect(meta.totalItems).to.be.a('number')
-  pm.expect(meta.itemsPerPage).to.be.a('number')
-  pm.expect(meta.hasNextPage).to.be.a('boolean')
-  pm.expect(meta.hasPreviousPage).to.be.a('boolean')
-})
-```
-
-## Dicas de Uso
-
-### 1. Performance
-
-- Use limites apropriados para sua aplicação (10-50 itens por página é geralmente ideal)
-- Implemente cache no cliente para evitar requisições desnecessárias
-- Considere usar `limit=100` apenas quando necessário carregar muitos dados de uma vez
-
-### 2. Tratamento de Erros
-
-- Sempre verifique o campo `success` na resposta
-- Implemente retry logic para erros temporários
-- Trate erros de validação (400) e erros do servidor (500) adequadamente
-
-### 3. Navegação
-
-- Use os metadados `hasNextPage` e `hasPreviousPage` para controlar a navegação
-- Implemente controles de paginação na interface do usuário
-- Considere mostrar o total de itens e páginas para melhor UX
-
-### 4. Monitoramento
-
-- Monitore o tempo de resposta das requisições
-- Implemente logging para debug de problemas de paginação
-- Use as informações de `uptime` e `database.status` para monitoramento de saúde
+Esta interface Swagger permite testar todas as rotas diretamente no navegador.

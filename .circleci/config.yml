@@ -93,10 +93,10 @@ build: &build
         command: |
           mkdir credentials
     - run:
-        name: Get service account from Secrets Manager and store on credentials folder
+        name: Get config and secrets from secrets manager
         command: |
-          gcloud secrets versions access latest --secret="${CIRCLE_PROJECT_REPONAME}"-service-account > ${PWD}/credentials/key.json
-          gcloud secrets versions access latest --secret="${CIRCLE_PROJECT_REPONAME}"-default-signer > ${PWD}/credentials/default-signer.rsa
+          gcloud secrets versions access latest --secret="${CIRCLE_PROJECT_REPONAME}"-config | yq eval --prettyPrint | sed 's/^/  /' >> ${PWD}/.k8s/${CI_ENVIRONMENT}/configmap.yaml
+          gcloud secrets versions access latest --secret="${CIRCLE_PROJECT_REPONAME}"-secret | jq '.[] |= @base64' | yq eval --prettyPrint | sed 's/^/  /' >> ${PWD}/.k8s/${CI_ENVIRONMENT}/secret.yaml
     - run:
         name: Build Docker image for GCR
         command: |

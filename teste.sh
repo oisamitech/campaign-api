@@ -2,6 +2,7 @@
 
 # Script de teste automatizado para a API de campanhas
 # Este script constrói e executa testes em um container Docker com MySQL
+# Versão melhorada com isolamento completo entre testes
 
 set -e  # Para o script se qualquer comando falhar
 
@@ -10,6 +11,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
 NC='\033[0m' # No Color
 
 # Função para log colorido
@@ -27,6 +29,10 @@ log_warning() {
 
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+log_info() {
+    echo -e "${PURPLE}[INFO]${NC} $1"
 }
 
 # Função para limpeza em caso de erro ou interrupção
@@ -68,6 +74,55 @@ cleanup() {
     log_success "Limpeza concluída"
 }
 
+# Função para executar um único arquivo de teste
+run_single_test_file() {
+    local test_file=$1
+    local test_name=$(basename "$test_file" .test.ts)
+    
+    log_info "========================================="
+    log_info "Executando: $test_name"
+    log_info "========================================="
+    
+    # Recriar banco para cada arquivo de teste para garantir isolamento
+    log "Resetando banco de dados para teste isolado..."
+    docker exec campaign-mysql-test mysql -u root -prootpassword -e "DROP DATABASE IF EXISTS campaigns;"
+    docker exec campaign-mysql-test mysql -u root -prootpassword -e "CREATE DATABASE campaigns;"
+    
+    # Executar o arquivo de teste específico
+    docker run --rm \
+        --name campaign-api-test-${test_name} \
+        --network campaign-test-network \
+        -e NODE_ENV=test \
+        -e BEARER_AUTH_KEY=1234567890 \
+        -e DATABASE_URL="mysql://root:rootpassword@campaign-mysql-test:3306/campaigns" \
+        -e PORT=3000 \
+        -e HOST=0.0.0.0 \
+        -e LOG_LEVEL=error \
+        -v $(pwd):/app \
+        -w /app \
+        campaign-api-test \
+        sh -c "
+            # Executar migrações do banco
+            echo 'Executando migrações do banco...'
+            npx prisma migrate deploy
+            
+            # Executar apenas o arquivo de teste específico
+            echo 'Executando teste: $test_file'
+            npx vitest run '$test_file' --reporter=verbose --no-coverage
+        "
+    
+    local exit_code=$?
+    
+    if [ $exit_code -eq 0 ]; then
+        log_success "✅ $test_name passou com sucesso!"
+    else
+        log_error "❌ $test_name falhou!"
+        return $exit_code
+    fi
+    
+    return 0
+}
+
 # Configurar trap para executar cleanup em caso de erro ou interrupção
 trap cleanup EXIT INT TERM
 
@@ -83,7 +138,7 @@ if ! command -v docker-compose >/dev/null 2>&1; then
     exit 1
 fi
 
-log "Iniciando processo de teste automatizado..."
+log "Iniciando processo de teste automatizado com isolamento melhorado..."
 
 # Criar rede para os testes
 log "Criando rede de teste..."
@@ -100,14 +155,14 @@ docker run -d \
     -e MYSQL_PASSWORD=testpass \
     -p 3307:3306 \
     --health-cmd="mysqladmin ping -h localhost -u root -prootpassword" \
-    --health-interval=10s \
-    --health-timeout=5s \
-    --health-retries=5 \
+    --health-interval=5s \
+    --health-timeout=3s \
+    --health-retries=10 \
     mysql:8.0
 
 # Aguardar MySQL estar saudável
 log "Aguardando MySQL estar pronto..."
-timeout=60
+timeout=120
 counter=0
 while [ $counter -lt $timeout ]; do
     if docker exec campaign-mysql-test mysqladmin ping -h localhost -u root -prootpassword >/dev/null 2>&1; then
@@ -126,39 +181,15 @@ done
 log "Construindo imagem da API para testes..."
 docker build -f Dockerfile.local -t campaign-api-test .
 
-# Executar container da API e executar testes
-log "Executando testes..."
+# Preparar dependências no container uma única vez
+log "Preparando dependências..."
 docker run --rm \
-    --name campaign-api-test \
+    --name campaign-api-test-setup \
     --network campaign-test-network \
-    -e NODE_ENV=test \
-    -e DATABASE_URL="mysql://root:rootpassword@campaign-mysql-test:3306/campaigns" \
-    -e PORT=3000 \
-    -e HOST=0.0.0.0 \
-    -e LOG_LEVEL=error \
     -v $(pwd):/app \
     -w /app \
     campaign-api-test \
     sh -c "
-        # Criar arquivo .env.test dentro do container
-        echo 'Criando arquivo .env.test dentro do container...'
-        cat > .env.test << 'ENVEOF'
-NODE_ENV=test
-DATABASE_URL=mysql://root:rootpassword@campaign-mysql-test:3306/campaigns
-PORT=3000
-HOST=0.0.0.0
-LOG_LEVEL=error
-ENVEOF
-        
-        # Verificar se o arquivo foi criado
-        echo 'Conteúdo do .env.test:'
-        cat .env.test
-        
-        # Verificar variáveis de ambiente
-        echo 'Variáveis de ambiente:'
-        echo 'NODE_ENV: ' \$NODE_ENV
-        echo 'DATABASE_URL: ' \$DATABASE_URL
-        
         # Instalar dependências
         echo 'Instalando dependências...'
         npm install
@@ -166,33 +197,61 @@ ENVEOF
         # Gerar cliente Prisma
         echo 'Gerando cliente Prisma...'
         npx prisma generate
-        
-        # Aguardar um pouco para garantir que a API esteja pronta
-        sleep 5
-        
-        # Executar migrações do banco
-        echo 'Executando migrações do banco...'
-        npx prisma migrate deploy
-        
-        # Executar seed se existir
-        if [ -f 'prisma/seed.ts' ]; then
-            echo 'Executando seed do banco...'
-            npx tsx prisma/seed.ts
-        fi
-        
-        # Executar testes
-        echo 'Executando suite de testes...'
-        npm run test:integration
     "
 
-# Verificar resultado dos testes
-if [ $? -eq 0 ]; then
-    log_success "Todos os testes passaram com sucesso!"
-else
-    log_error "Alguns testes falharam!"
+# Descobrir todos os arquivos de teste de integração
+log "Descobrindo arquivos de teste..."
+test_files=$(find test/integration -name "*.test.ts" | sort)
+
+if [ -z "$test_files" ]; then
+    log_error "Nenhum arquivo de teste encontrado!"
     exit 1
 fi
 
-log_success "Processo de teste concluído com sucesso!"
+log_info "Arquivos de teste encontrados:"
+for file in $test_files; do
+    log_info "  - $file"
+done
 
-# Limpeza será executada automaticamente pelo trap
+# Variáveis para controle de execução
+total_tests=0
+passed_tests=0
+failed_tests=0
+failed_test_files=""
+
+# Executar cada arquivo de teste sequencialmente com isolamento completo
+for test_file in $test_files; do
+    total_tests=$((total_tests + 1))
+    
+    if run_single_test_file "$test_file"; then
+        passed_tests=$((passed_tests + 1))
+    else
+        failed_tests=$((failed_tests + 1))
+        failed_test_files="$failed_test_files\n  - $test_file"
+    fi
+    
+    # Pequena pausa entre testes para garantir limpeza completa
+    sleep 2
+done
+
+# Relatório final
+log_info "========================================="
+log_info "RELATÓRIO FINAL DOS TESTES"
+log_info "========================================="
+log_info "Total de arquivos de teste: $total_tests"
+log_success "Testes passaram: $passed_tests"
+if [ $failed_tests -gt 0 ]; then
+    log_error "Testes falharam: $failed_tests"
+    log_error "Arquivos que falharam:$failed_test_files"
+else
+    log_success "Testes falharam: $failed_tests"
+fi
+
+# Verificar resultado geral
+if [ $failed_tests -eq 0 ]; then
+    log_success "🎉 Todos os testes passaram com sucesso!"
+    exit 0
+else
+    log_error "💥 $failed_tests de $total_tests arquivos de teste falharam!"
+    exit 1
+fi

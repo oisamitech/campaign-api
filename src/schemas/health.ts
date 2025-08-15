@@ -64,10 +64,37 @@ export const healthSchema: FastifySchema = {
   description: 'Check application and database health status',
   tags: ['Health'],
   summary: 'Health Check',
+  security: [], // Health check não requer autenticação
   response: {
     200: {
       description: 'Health status returned successfully',
       ...healthResponseSchema,
+    },
+    500: {
+      description: 'Internal server error',
+      type: 'object',
+      properties: {
+        statusCode: {
+          type: 'number',
+          description: 'HTTP status code',
+          example: 500,
+        },
+        success: {
+          type: 'boolean',
+          description: 'Whether the operation was successful',
+          example: false,
+        },
+        error: {
+          type: 'string',
+          description: 'Error type',
+          example: 'Internal Server Error',
+        },
+        message: {
+          type: 'string',
+          description: 'Error message',
+        },
+      },
+      required: ['statusCode', 'success', 'error', 'message'],
     },
   },
 }
