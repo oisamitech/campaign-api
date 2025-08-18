@@ -379,6 +379,11 @@ export const createCampaignSchema: FastifySchema = {
       description: 'Unauthorized - Bearer token required or invalid',
       ...errorResponseSchema,
     },
+    409: {
+      description:
+        'Date overlap conflict - Campaign dates overlap with existing campaign',
+      ...errorResponseSchema,
+    },
     500: {
       description: 'Internal server error',
       ...errorResponseSchema,
@@ -412,6 +417,11 @@ export const updateCampaignSchema: FastifySchema = {
     },
     404: {
       description: 'Campaign not found',
+      ...errorResponseSchema,
+    },
+    409: {
+      description:
+        'Date overlap conflict - Campaign dates overlap with existing campaign',
       ...errorResponseSchema,
     },
     500: {

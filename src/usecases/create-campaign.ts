@@ -51,6 +51,16 @@ export interface CreateCampaignUseCase {
   execute(request: CreateCampaignRequest): Promise<CreateCampaignResponse>
 }
 
+class DateOverlapError extends Error {
+  public statusCode = 409
+  public error = 'Date Overlap Error'
+
+  constructor(message: string) {
+    super(message)
+    this.name = 'DateOverlapError'
+  }
+}
+
 export class CreateCampaignUseCaseImpl implements CreateCampaignUseCase {
   constructor(
     private readonly campaignRepository: CampaignRepository,
@@ -62,6 +72,24 @@ export class CreateCampaignUseCaseImpl implements CreateCampaignUseCase {
   ): Promise<CreateCampaignResponse> {
     const startDate = new Date(request.startDate)
     const endDate = new Date(request.endDate)
+
+    try {
+      const overlappingCampaigns =
+        await this.campaignRepository.findOverlappingCampaigns(
+          startDate,
+          endDate
+        )
+
+      if (overlappingCampaigns.length > 0) {
+        const conflictingCampaign = overlappingCampaigns[0]
+        throw new DateOverlapError(
+          `Não é possível criar a campanha. O período informado (${startDate.toLocaleDateString('pt-BR')} a ${endDate.toLocaleDateString('pt-BR')}) está em conflito com a campanha "${conflictingCampaign.name}" (${conflictingCampaign.startDate.toLocaleDateString('pt-BR')} a ${conflictingCampaign.endDate.toLocaleDateString('pt-BR')}).`
+        )
+      }
+    } catch (error) {
+      console.error('Erro na verificação de sobreposição:', error)
+      throw error
+    }
 
     const createCampaignParams: CreateCampaignParams = {
       name: request.name.trim(),

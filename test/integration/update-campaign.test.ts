@@ -518,4 +518,199 @@ describe('Update Campaign Integration Tests', () => {
       expect(rulesInDb.length).toBeGreaterThan(0)
     })
   })
+
+  describe('PATCH /api/campaigns/:id - Date Overlap Validation Tests', () => {
+    it('should reject update when new dates overlap with existing campaign', async () => {
+      await createTestCampaign({
+        name: 'First Campaign',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      })
+
+      const secondCampaign = await createTestCampaign({
+        name: 'Second Campaign',
+        startDate: '2024-10-01T00:00:00.000Z',
+        endDate: '2024-12-31T23:59:59.000Z',
+      })
+
+      const updatePayload = {
+        startDate: '2024-07-15T00:00:00.000Z',
+        endDate: '2024-09-15T23:59:59.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${secondCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(409)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Date Overlap Error')
+      expect(body.message).toContain('está em conflito com a campanha')
+      expect(body.message).toContain('First Campaign')
+    })
+
+    it('should allow update when new dates do not overlap with any existing campaign', async () => {
+      await createTestCampaign({
+        name: 'First Campaign',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      })
+
+      const secondCampaign = await createTestCampaign({
+        name: 'Second Campaign',
+        startDate: '2024-10-01T00:00:00.000Z',
+        endDate: '2024-12-31T23:59:59.000Z',
+      })
+
+      const updatePayload = {
+        startDate: '2025-01-01T00:00:00.000Z',
+        endDate: '2025-03-31T23:59:59.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${secondCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data.startDate).toBe('2025-01-01T00:00:00.000Z')
+      expect(body.data.endDate).toBe('2025-03-31T23:59:59.000Z')
+    })
+
+    it('should allow update when only changing startDate and it does not create overlap', async () => {
+      await createTestCampaign({
+        name: 'First Campaign',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      })
+
+      const secondCampaign = await createTestCampaign({
+        name: 'Second Campaign',
+        startDate: '2024-10-01T00:00:00.000Z',
+        endDate: '2024-12-31T23:59:59.000Z',
+      })
+
+      const updatePayload = {
+        startDate: '2024-11-01T00:00:00.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${secondCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data.startDate).toBe('2024-11-01T00:00:00.000Z')
+      expect(body.data.endDate).toBe('2024-12-31T23:59:59.000Z')
+    })
+
+    it('should allow update when only changing endDate and it does not create overlap', async () => {
+      await createTestCampaign({
+        name: 'First Campaign',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      })
+
+      const secondCampaign = await createTestCampaign({
+        name: 'Second Campaign',
+        startDate: '2024-10-01T00:00:00.000Z',
+        endDate: '2024-12-31T23:59:59.000Z',
+      })
+
+      const updatePayload = {
+        endDate: '2024-11-30T23:59:59.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${secondCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data.startDate).toBe('2024-10-01T00:00:00.000Z')
+      expect(body.data.endDate).toBe('2024-11-30T23:59:59.000Z')
+    })
+
+    it('should not check overlap when only updating non-date fields', async () => {
+      await createTestCampaign({
+        name: 'First Campaign',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      })
+
+      const secondCampaign = await createTestCampaign({
+        name: 'Second Campaign',
+        startDate: '2024-10-01T00:00:00.000Z',
+        endDate: '2024-12-31T23:59:59.000Z',
+      })
+
+      const updatePayload = {
+        name: 'Updated Second Campaign',
+        status: 'INACTIVE',
+        isDefault: true,
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${secondCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data.name).toBe('Updated Second Campaign')
+      expect(body.data.status).toBe('INACTIVE')
+      expect(body.data.isDefault).toBe(true)
+    })
+
+    it('should exclude itself from overlap validation', async () => {
+      const campaign = await createTestCampaign({
+        name: 'Test Campaign',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      })
+
+      const updatePayload = {
+        startDate: '2024-05-15T00:00:00.000Z',
+        endDate: '2024-09-15T23:59:59.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${campaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data.startDate).toBe('2024-05-15T00:00:00.000Z')
+      expect(body.data.endDate).toBe('2024-09-15T23:59:59.000Z')
+    })
+  })
 })
