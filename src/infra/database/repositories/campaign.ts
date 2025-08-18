@@ -65,6 +65,11 @@ export interface CampaignRepository {
   findByIdWithRules(id: string): Promise<CampaignWithRules | null>
   update(id: string, params: UpdateCampaignParams): Promise<Campaign>
   delete(id: string): Promise<Campaign>
+  findOverlappingCampaigns(
+    startDate: Date,
+    endDate: Date,
+    excludeId?: string
+  ): Promise<Campaign[]>
 }
 
 // Implementação do repositório usando Prisma
@@ -199,6 +204,21 @@ export class PrismaCampaignRepository implements CampaignRepository {
       },
       data: {
         deletedAt: new Date(),
+      },
+    })
+  }
+
+  async findOverlappingCampaigns(
+    startDate: Date,
+    endDate: Date,
+    excludeId?: string
+  ): Promise<Campaign[]> {
+    return this.prisma.campaign.findMany({
+      where: {
+        deletedAt: null,
+        ...(excludeId && { id: { not: BigInt(excludeId) } }),
+        startDate: { lte: endDate },
+        endDate: { gte: startDate },
       },
     })
   }
