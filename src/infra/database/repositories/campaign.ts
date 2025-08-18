@@ -98,7 +98,8 @@ export class PrismaCampaignRepository implements CampaignRepository {
     const { page, limit } = params
     const offset = (page - 1) * limit
 
-    return this.prisma.campaign.findMany({
+    // Buscar todas as campanhas primeiro para aplicar ordenação customizada
+    const allCampaigns = await this.prisma.campaign.findMany({
       where: {
         deletedAt: null,
       },
@@ -112,12 +113,31 @@ export class PrismaCampaignRepository implements CampaignRepository {
           },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      skip: offset,
-      take: limit,
-    }) as Promise<CampaignWithRules[]>
+    }) as CampaignWithRules[]
+
+    // Aplicar ordenação customizada
+    const currentDate = new Date()
+    const sortedCampaigns = allCampaigns.sort((a, b) => {
+      const isActiveA = a.startDate <= currentDate && a.endDate >= currentDate
+      const isActiveB = b.startDate <= currentDate && b.endDate >= currentDate
+
+      // Se ambas são ativas ou ambas são inativas, ordenar por data
+      if (isActiveA === isActiveB) {
+        if (isActiveA) {
+          // Campanhas ativas: mais recente para mais distante (startDate DESC)
+          return b.startDate.getTime() - a.startDate.getTime()
+        } else {
+          // Campanhas inativas: mais antiga para mais recente (startDate ASC)
+          return a.startDate.getTime() - b.startDate.getTime()
+        }
+      }
+
+      // Campanhas ativas sempre vêm primeiro
+      return isActiveA ? -1 : 1
+    })
+
+    // Aplicar paginação após ordenação
+    return sortedCampaigns.slice(offset, offset + limit)
   }
 
   async count(): Promise<number> {
