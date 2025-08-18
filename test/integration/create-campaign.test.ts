@@ -133,6 +133,8 @@ describe('Create Campaign Integration Tests', () => {
       const payload = {
         ...getValidCampaignPayload(),
         name: 'Campaign with Multiple Rules',
+        startDate: '2025-01-01T00:00:00.000Z',
+        endDate: '2025-06-30T23:59:59.000Z',
         rules: [
           {
             minLives: 1,
@@ -193,6 +195,8 @@ describe('Create Campaign Integration Tests', () => {
         ...getValidCampaignPayload(),
         isDefault: true,
         name: 'Default Campaign Test',
+        startDate: '2025-07-01T00:00:00.000Z',
+        endDate: '2025-12-31T23:59:59.000Z',
       }
 
       const response = await app.inject({
@@ -212,8 +216,8 @@ describe('Create Campaign Integration Tests', () => {
     it('should create a campaign with minimal valid data', async () => {
       const payload = {
         name: 'Minimal Campaign',
-        startDate: '2024-07-01T00:00:00.000Z',
-        endDate: '2024-07-02T00:00:00.000Z',
+        startDate: '2026-01-01T00:00:00.000Z',
+        endDate: '2026-01-02T00:00:00.000Z',
         rules: [
           {
             minLives: 1,
@@ -246,8 +250,8 @@ describe('Create Campaign Integration Tests', () => {
     it('should create a campaign with maximum valid data', async () => {
       const payload = {
         name: 'A'.repeat(255), // máximo de caracteres
-        startDate: '2024-01-01T00:00:00.000Z',
-        endDate: '2025-12-31T23:59:59.000Z',
+        startDate: '2026-02-01T00:00:00.000Z',
+        endDate: '2026-12-31T23:59:59.000Z',
         isDefault: false,
         status: 'ACTIVE',
         rules: [
