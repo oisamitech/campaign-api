@@ -99,7 +99,7 @@ export class PrismaCampaignRepository implements CampaignRepository {
     const offset = (page - 1) * limit
 
     // Buscar todas as campanhas primeiro para aplicar ordenação customizada
-    const allCampaigns = await this.prisma.campaign.findMany({
+    const allCampaigns = (await this.prisma.campaign.findMany({
       where: {
         deletedAt: null,
       },
@@ -113,7 +113,7 @@ export class PrismaCampaignRepository implements CampaignRepository {
           },
         },
       },
-    }) as CampaignWithRules[]
+    })) as CampaignWithRules[]
 
     // Aplicar ordenação customizada
     const currentDate = new Date()

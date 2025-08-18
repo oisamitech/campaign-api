@@ -550,26 +550,38 @@ describe('Create Campaign Integration Tests', () => {
   describe('POST /api/campaigns - Business Logic Tests', () => {
     it('should handle concurrent campaign creation requests', async () => {
       const currentDate = new Date()
-      
+
       const payload1 = {
         ...getValidCampaignPayload(),
         name: 'Concurrent Campaign 1',
-        startDate: new Date(currentDate.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString(), // +1 dia
-        endDate: new Date(currentDate.getTime() + 31 * 24 * 60 * 60 * 1000).toISOString(), // +31 dias
+        startDate: new Date(
+          currentDate.getTime() + 1 * 24 * 60 * 60 * 1000
+        ).toISOString(), // +1 dia
+        endDate: new Date(
+          currentDate.getTime() + 31 * 24 * 60 * 60 * 1000
+        ).toISOString(), // +31 dias
       }
 
       const payload2 = {
         ...getValidCampaignPayload(),
         name: 'Concurrent Campaign 2',
-        startDate: new Date(currentDate.getTime() + 40 * 24 * 60 * 60 * 1000).toISOString(), // +40 dias
-        endDate: new Date(currentDate.getTime() + 70 * 24 * 60 * 60 * 1000).toISOString(), // +70 dias
+        startDate: new Date(
+          currentDate.getTime() + 40 * 24 * 60 * 60 * 1000
+        ).toISOString(), // +40 dias
+        endDate: new Date(
+          currentDate.getTime() + 70 * 24 * 60 * 60 * 1000
+        ).toISOString(), // +70 dias
       }
 
       const payload3 = {
         ...getValidCampaignPayload(),
         name: 'Concurrent Campaign 3',
-        startDate: new Date(currentDate.getTime() + 80 * 24 * 60 * 60 * 1000).toISOString(), // +80 dias
-        endDate: new Date(currentDate.getTime() + 110 * 24 * 60 * 60 * 1000).toISOString(), // +110 dias
+        startDate: new Date(
+          currentDate.getTime() + 80 * 24 * 60 * 60 * 1000
+        ).toISOString(), // +80 dias
+        endDate: new Date(
+          currentDate.getTime() + 110 * 24 * 60 * 60 * 1000
+        ).toISOString(), // +110 dias
       }
 
       // Fazer requisições simultâneas
@@ -623,11 +635,17 @@ describe('Create Campaign Integration Tests', () => {
       campaignsInDb.forEach(campaign => {
         expect(campaign.rules).toHaveLength(1)
       })
-      
+
       // Verificar que as datas são diferentes para evitar sobreposição
-      const sortedCampaigns = campaignsInDb.sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
-      expect(sortedCampaigns[0].endDate.getTime()).toBeLessThan(sortedCampaigns[1].startDate.getTime())
-      expect(sortedCampaigns[1].endDate.getTime()).toBeLessThan(sortedCampaigns[2].startDate.getTime())
+      const sortedCampaigns = campaignsInDb.sort(
+        (a, b) => a.startDate.getTime() - b.startDate.getTime()
+      )
+      expect(sortedCampaigns[0].endDate.getTime()).toBeLessThan(
+        sortedCampaigns[1].startDate.getTime()
+      )
+      expect(sortedCampaigns[1].endDate.getTime()).toBeLessThan(
+        sortedCampaigns[2].startDate.getTime()
+      )
     })
 
     it('should handle special characters in campaign name', async () => {

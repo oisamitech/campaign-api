@@ -375,7 +375,7 @@ describe('List Campaigns Integration Tests', () => {
 
       // Criar campanhas com diferentes datas para testar ordenação
       const currentDate = new Date()
-      
+
       // Campanha ativa 1 (mais recente)
       const activeCampaign1 = await prisma.campaign.create({
         data: {
@@ -432,7 +432,12 @@ describe('List Campaigns Integration Tests', () => {
       })
 
       // Adicionar regras para as campanhas (para manter compatibilidade)
-      const campaigns = [activeCampaign1, activeCampaign2, inactiveCampaign1, inactiveCampaign2]
+      const campaigns = [
+        activeCampaign1,
+        activeCampaign2,
+        inactiveCampaign1,
+        inactiveCampaign2,
+      ]
       for (const campaign of campaigns) {
         await prisma.rule.create({
           data: {
@@ -517,7 +522,7 @@ describe('List Campaigns Integration Tests', () => {
       await prisma.campaign.deleteMany()
 
       const currentDate = new Date()
-      
+
       const campaigns = [
         {
           name: 'Active Campaign 1',
@@ -525,7 +530,7 @@ describe('List Campaigns Integration Tests', () => {
           endDate: new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 dias no futuro
         },
         {
-          name: 'Active Campaign 2', 
+          name: 'Active Campaign 2',
           startDate: new Date(currentDate.getTime() - 20 * 24 * 60 * 60 * 1000), // 20 dias atrás
           endDate: new Date(currentDate.getTime() + 15 * 24 * 60 * 60 * 1000), // 15 dias no futuro
         },
@@ -533,7 +538,7 @@ describe('List Campaigns Integration Tests', () => {
           name: 'Active Campaign 3',
           startDate: new Date(currentDate.getTime() - 10 * 24 * 60 * 60 * 1000), // 10 dias atrás
           endDate: new Date(currentDate.getTime() + 20 * 24 * 60 * 60 * 1000), // 20 dias no futuro
-        }
+        },
       ]
 
       for (const campaignData of campaigns) {
@@ -585,7 +590,7 @@ describe('List Campaigns Integration Tests', () => {
       await prisma.campaign.deleteMany()
 
       const currentDate = new Date()
-      
+
       const campaigns = [
         {
           name: 'Inactive Campaign 1',
@@ -601,7 +606,7 @@ describe('List Campaigns Integration Tests', () => {
           name: 'Future Campaign',
           startDate: new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 dias no futuro
           endDate: new Date(currentDate.getTime() + 60 * 24 * 60 * 60 * 1000), // 60 dias no futuro
-        }
+        },
       ]
 
       for (const campaignData of campaigns) {
