@@ -713,4 +713,385 @@ describe('Update Campaign Integration Tests', () => {
       expect(body.data.endDate).toBe('2024-09-15T23:59:59.000Z')
     })
   })
+
+  describe('PATCH /api/campaigns/:id - Rules Management', () => {
+    it('should replace all existing rules when rules array is provided', async () => {
+      // Criar uma campanha com regras iniciais
+      const createdCampaign = await createTestCampaign({
+        rules: [
+          {
+            minLives: 1,
+            maxLives: 5,
+            plans: [1, 2],
+            value: 10,
+            paymentMethod: ['PIX'],
+            accommodation: ['APARTMENT'],
+            typeProduct: ['withParticipation'],
+            obstetrics: ['withObstetric'],
+          },
+          {
+            minLives: 6,
+            maxLives: 10,
+            plans: [3, 4],
+            value: 15,
+            paymentMethod: ['CREDITCARD'],
+            accommodation: ['INFIRMARY'],
+            typeProduct: ['withoutParticipation'],
+            obstetrics: ['withoutObstetric'],
+          },
+        ],
+      })
+
+      // Verificar que foram criadas 2 regras
+      const initialRules = await prisma.rule.findMany({
+        where: { campaignId: BigInt(createdCampaign.id), deletedAt: null },
+      })
+      expect(initialRules.length).toBe(2)
+
+      // Atualizar campanha com novas regras (deve substituir todas)
+      const updatePayload = {
+        name: 'Updated Campaign',
+        rules: [
+          {
+            minLives: 10,
+            maxLives: 20,
+            plans: [5, 6, 7],
+            value: 25,
+            paymentMethod: ['PIX', 'BANKSLIP'],
+            accommodation: ['APARTMENT'],
+            typeProduct: ['withParticipation'],
+            obstetrics: ['withObstetric'],
+          },
+        ],
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${createdCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data.name).toBe('Updated Campaign')
+
+      // Verificar que as regras antigas foram soft-deletadas
+      const oldRules = await prisma.rule.findMany({
+        where: {
+          campaignId: BigInt(createdCampaign.id),
+          deletedAt: { not: null },
+        },
+      })
+      expect(oldRules.length).toBe(2) // As 2 regras iniciais foram soft-deletadas
+
+      // Verificar que a nova regra foi criada
+      const newRules = await prisma.rule.findMany({
+        where: { campaignId: BigInt(createdCampaign.id), deletedAt: null },
+      })
+      expect(newRules.length).toBe(1)
+      expect(newRules[0].minLives).toBe(10)
+      expect(newRules[0].maxLives).toBe(20)
+      expect(newRules[0].value).toBe(25)
+      expect(newRules[0].plans).toEqual([5, 6, 7])
+      expect(newRules[0].paymentMethod).toEqual(['PIX', 'BANKSLIP'])
+    })
+
+    it('should update campaign without affecting rules when rules field is not provided', async () => {
+      // Criar uma campanha com regras
+      const createdCampaign = await createTestCampaign()
+
+      // Verificar que tem regras
+      const initialRules = await prisma.rule.findMany({
+        where: { campaignId: BigInt(createdCampaign.id), deletedAt: null },
+      })
+      expect(initialRules.length).toBeGreaterThan(0)
+      const initialRuleIds = initialRules.map(rule => rule.id.toString())
+
+      // Atualizar apenas dados básicos da campanha (sem campo rules)
+      const updatePayload = {
+        name: 'Updated Campaign Name Only',
+        status: 'INACTIVE',
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${createdCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data.name).toBe('Updated Campaign Name Only')
+      expect(body.data.status).toBe('INACTIVE')
+
+      // Verificar que as regras permanecem inalteradas
+      const finalRules = await prisma.rule.findMany({
+        where: { campaignId: BigInt(createdCampaign.id), deletedAt: null },
+      })
+      expect(finalRules.length).toBe(initialRules.length)
+      const finalRuleIds = finalRules.map(rule => rule.id.toString())
+      expect(finalRuleIds).toEqual(initialRuleIds) // Mesmas regras originais
+    })
+
+    it('should handle multiple rules replacement correctly', async () => {
+      // Criar campanha com uma regra
+      const createdCampaign = await createTestCampaign({
+        rules: [
+          {
+            minLives: 1,
+            maxLives: 3,
+            plans: [1],
+            value: 5,
+            paymentMethod: ['PIX'],
+            accommodation: ['APARTMENT'],
+            typeProduct: ['withParticipation'],
+            obstetrics: ['withObstetric'],
+          },
+        ],
+      })
+
+      // Substituir por múltiplas regras
+      const updatePayload = {
+        rules: [
+          {
+            minLives: 1,
+            maxLives: 5,
+            plans: [1, 2],
+            value: 10,
+            paymentMethod: ['PIX'],
+            accommodation: ['APARTMENT'],
+            typeProduct: ['withParticipation'],
+            obstetrics: ['withObstetric'],
+          },
+          {
+            minLives: 6,
+            maxLives: 10,
+            plans: [3, 4],
+            value: 15,
+            paymentMethod: ['CREDITCARD'],
+            accommodation: ['INFIRMARY'],
+            typeProduct: ['withoutParticipation'],
+            obstetrics: ['withoutObstetric'],
+          },
+          {
+            minLives: 11,
+            maxLives: 20,
+            plans: [5],
+            value: 20,
+            paymentMethod: ['BANKSLIP'],
+            accommodation: ['APARTMENT'],
+            typeProduct: ['withParticipation'],
+            obstetrics: ['withObstetric'],
+          },
+        ],
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${createdCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      // Verificar que a regra antiga foi soft-deletada
+      const oldRules = await prisma.rule.findMany({
+        where: {
+          campaignId: BigInt(createdCampaign.id),
+          deletedAt: { not: null },
+        },
+      })
+      expect(oldRules.length).toBe(1)
+
+      // Verificar que as 3 novas regras foram criadas
+      const newRules = await prisma.rule.findMany({
+        where: { campaignId: BigInt(createdCampaign.id), deletedAt: null },
+        orderBy: { minLives: 'asc' },
+      })
+      expect(newRules.length).toBe(3)
+
+      // Verificar primeira regra
+      expect(newRules[0].minLives).toBe(1)
+      expect(newRules[0].maxLives).toBe(5)
+      expect(newRules[0].value).toBe(10)
+
+      // Verificar segunda regra
+      expect(newRules[1].minLives).toBe(6)
+      expect(newRules[1].maxLives).toBe(10)
+      expect(newRules[1].value).toBe(15)
+
+      // Verificar terceira regra
+      expect(newRules[2].minLives).toBe(11)
+      expect(newRules[2].maxLives).toBe(20)
+      expect(newRules[2].value).toBe(20)
+    })
+
+    it('should validate rules schema when updating with rules', async () => {
+      const createdCampaign = await createTestCampaign()
+
+      // Tentar atualizar com regra inválida (sem campos obrigatórios)
+      const updatePayload = {
+        name: 'Updated Name',
+        rules: [
+          {
+            minLives: 1,
+            // Faltando campos obrigatórios
+          },
+        ],
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${createdCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(400)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(false)
+      expect(body.message).toContain('body/rules/0 must have required property')
+    })
+
+    it('should require at least one rule when rules array is provided', async () => {
+      const createdCampaign = await createTestCampaign()
+
+      // Tentar atualizar com array de regras vazio
+      const updatePayload = {
+        name: 'Updated Name',
+        rules: [],
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${createdCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(400)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(false)
+      expect(body.message).toContain(
+        'body/rules must NOT have fewer than 1 items'
+      )
+    })
+
+    it('should combine campaign updates with rules replacement in single request', async () => {
+      const createdCampaign = await createTestCampaign({
+        name: 'Original Campaign',
+        status: 'ACTIVE',
+        isDefault: false,
+      })
+
+      // Atualizar campanha e regras simultaneamente
+      const updatePayload = {
+        name: 'Updated Campaign with New Rules',
+        status: 'PAUSED',
+        isDefault: true,
+        rules: [
+          {
+            minLives: 15,
+            maxLives: 25,
+            plans: [8, 9],
+            value: 30,
+            paymentMethod: ['PIX', 'CREDITCARD'],
+            accommodation: ['INFIRMARY'],
+            typeProduct: ['withoutParticipation'],
+            obstetrics: ['withoutObstetric'],
+          },
+        ],
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${createdCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+
+      // Verificar atualização da campanha
+      expect(body.data.name).toBe('Updated Campaign with New Rules')
+      expect(body.data.status).toBe('PAUSED')
+      expect(body.data.isDefault).toBe(true)
+
+      // Verificar que as regras antigas foram substituídas
+      const oldRules = await prisma.rule.findMany({
+        where: {
+          campaignId: BigInt(createdCampaign.id),
+          deletedAt: { not: null },
+        },
+      })
+      expect(oldRules.length).toBe(1) // Regra original soft-deletada
+
+      const newRules = await prisma.rule.findMany({
+        where: { campaignId: BigInt(createdCampaign.id), deletedAt: null },
+      })
+      expect(newRules.length).toBe(1)
+      expect(newRules[0].minLives).toBe(15)
+      expect(newRules[0].value).toBe(30)
+    })
+
+    it('should handle rules with all valid enum values', async () => {
+      const createdCampaign = await createTestCampaign()
+
+      const updatePayload = {
+        rules: [
+          {
+            minLives: 1,
+            maxLives: 10,
+            plans: [1, 2, 3],
+            value: 50,
+            paymentMethod: ['PIX', 'BANKSLIP', 'CREDITCARD'], // Todos os valores válidos
+            accommodation: ['INFIRMARY', 'APARTMENT'], // Todos os valores válidos
+            typeProduct: ['withParticipation', 'withoutParticipation'], // Todos os valores válidos
+            obstetrics: ['withObstetric', 'withoutObstetric'], // Todos os valores válidos
+          },
+        ],
+      }
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/campaigns/${createdCampaign.id}`,
+        headers: getAuthHeaders(),
+        payload: updatePayload,
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      // Verificar que a regra foi criada com todos os valores
+      const newRules = await prisma.rule.findMany({
+        where: { campaignId: BigInt(createdCampaign.id), deletedAt: null },
+      })
+      expect(newRules.length).toBe(1)
+      expect(newRules[0].paymentMethod).toEqual([
+        'PIX',
+        'BANKSLIP',
+        'CREDITCARD',
+      ])
+      expect(newRules[0].accommodation).toEqual(['INFIRMARY', 'APARTMENT'])
+      expect(newRules[0].typeProduct).toEqual([
+        'withParticipation',
+        'withoutParticipation',
+      ])
+      expect(newRules[0].obstetrics).toEqual([
+        'withObstetric',
+        'withoutObstetric',
+      ])
+    })
+  })
 })

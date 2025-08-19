@@ -36,6 +36,16 @@ export interface UpdateCampaignBody {
   endDate?: string
   isDefault?: boolean
   status?: string
+  rules?: Array<{
+    minLives: number
+    maxLives: number
+    plans: number[]
+    value: number
+    paymentMethod: string[]
+    accommodation: string[]
+    typeProduct: string[]
+    obstetrics: string[]
+  }>
 }
 
 // Tipos para deleção de campanha
