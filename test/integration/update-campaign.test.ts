@@ -713,7 +713,7 @@ describe('Update Campaign Integration Tests', () => {
       expect(body.data.endDate).toBe('2024-09-15T23:59:59.000Z')
     })
   })
-  
+
   describe('PATCH /api/campaigns/:id - Rules Management', () => {
     it('should replace all existing rules when rules array is provided', async () => {
       // Criar uma campanha com regras iniciais
@@ -780,7 +780,10 @@ describe('Update Campaign Integration Tests', () => {
 
       // Verificar que as regras antigas foram soft-deletadas
       const oldRules = await prisma.rule.findMany({
-        where: { campaignId: BigInt(createdCampaign.id), deletedAt: { not: null } },
+        where: {
+          campaignId: BigInt(createdCampaign.id),
+          deletedAt: { not: null },
+        },
       })
       expect(oldRules.length).toBe(2) // As 2 regras iniciais foram soft-deletadas
 
@@ -900,7 +903,10 @@ describe('Update Campaign Integration Tests', () => {
 
       // Verificar que a regra antiga foi soft-deletada
       const oldRules = await prisma.rule.findMany({
-        where: { campaignId: BigInt(createdCampaign.id), deletedAt: { not: null } },
+        where: {
+          campaignId: BigInt(createdCampaign.id),
+          deletedAt: { not: null },
+        },
       })
       expect(oldRules.length).toBe(1)
 
@@ -975,7 +981,9 @@ describe('Update Campaign Integration Tests', () => {
 
       const body = JSON.parse(response.body)
       expect(body.success).toBe(false)
-      expect(body.message).toContain('body/rules must NOT have fewer than 1 items')
+      expect(body.message).toContain(
+        'body/rules must NOT have fewer than 1 items'
+      )
     })
 
     it('should combine campaign updates with rules replacement in single request', async () => {
@@ -1015,7 +1023,7 @@ describe('Update Campaign Integration Tests', () => {
 
       const body = JSON.parse(response.body)
       expect(body.success).toBe(true)
-      
+
       // Verificar atualização da campanha
       expect(body.data.name).toBe('Updated Campaign with New Rules')
       expect(body.data.status).toBe('PAUSED')
@@ -1023,7 +1031,10 @@ describe('Update Campaign Integration Tests', () => {
 
       // Verificar que as regras antigas foram substituídas
       const oldRules = await prisma.rule.findMany({
-        where: { campaignId: BigInt(createdCampaign.id), deletedAt: { not: null } },
+        where: {
+          campaignId: BigInt(createdCampaign.id),
+          deletedAt: { not: null },
+        },
       })
       expect(oldRules.length).toBe(1) // Regra original soft-deletada
 
@@ -1067,10 +1078,20 @@ describe('Update Campaign Integration Tests', () => {
         where: { campaignId: BigInt(createdCampaign.id), deletedAt: null },
       })
       expect(newRules.length).toBe(1)
-      expect(newRules[0].paymentMethod).toEqual(['PIX', 'BANKSLIP', 'CREDITCARD'])
+      expect(newRules[0].paymentMethod).toEqual([
+        'PIX',
+        'BANKSLIP',
+        'CREDITCARD',
+      ])
       expect(newRules[0].accommodation).toEqual(['INFIRMARY', 'APARTMENT'])
-      expect(newRules[0].typeProduct).toEqual(['withParticipation', 'withoutParticipation'])
-      expect(newRules[0].obstetrics).toEqual(['withObstetric', 'withoutObstetric'])
+      expect(newRules[0].typeProduct).toEqual([
+        'withParticipation',
+        'withoutParticipation',
+      ])
+      expect(newRules[0].obstetrics).toEqual([
+        'withObstetric',
+        'withoutObstetric',
+      ])
     })
   })
 })

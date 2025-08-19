@@ -313,7 +313,8 @@ export const updateCampaignBodySchema = {
     },
     rules: {
       type: 'array',
-      description: 'Array of campaign rules (optional - replaces all existing rules)',
+      description:
+        'Array of campaign rules (optional - replaces all existing rules)',
       items: createCampaignRuleSchema,
       minItems: 1,
     },

@@ -2,7 +2,6 @@ import {
   CampaignRepository,
   UpdateCampaignParams,
   RuleRepository,
-  CreateRuleParams,
 } from '../infra/database/repositories/index.js'
 
 export interface UpdateCampaignRequest {
@@ -68,13 +67,18 @@ export class UpdateCampaignUseCaseImpl implements UpdateCampaignUseCase {
 
     const updateParams: UpdateCampaignParams = {
       ...(request.name !== undefined && { name: request.name.trim() }),
-      ...(request.startDate !== undefined && { startDate: new Date(request.startDate) }),
-      ...(request.endDate !== undefined && { endDate: new Date(request.endDate) }),
+      ...(request.startDate !== undefined && {
+        startDate: new Date(request.startDate),
+      }),
+      ...(request.endDate !== undefined && {
+        endDate: new Date(request.endDate),
+      }),
       ...(request.isDefault !== undefined && { isDefault: request.isDefault }),
       ...(request.status !== undefined && { status: request.status }),
     }
 
-    const hasDateChanges = updateParams.startDate !== undefined || updateParams.endDate !== undefined
+    const hasDateChanges =
+      updateParams.startDate !== undefined || updateParams.endDate !== undefined
 
     if (hasDateChanges) {
       const newStartDate = updateParams.startDate ?? existingCampaign.startDate
