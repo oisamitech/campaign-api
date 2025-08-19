@@ -84,3 +84,24 @@ export interface PaginationMeta {
   hasNextPage: boolean
   hasPreviousPage: boolean
 }
+
+// Tipos para atualização de rule
+export interface UpdateRuleParams {
+  id: string
+}
+
+export interface UpdateRuleBody {
+  minLives?: number
+  maxLives?: number
+  plans?: number[]
+  value?: number
+  paymentMethod?: string[]
+  accommodation?: string[]
+  typeProduct?: string[]
+  obstetrics?: string[]
+}
+
+export type UpdateRuleRequest = FastifyRequest<{
+  Params: UpdateRuleParams
+  Body: UpdateRuleBody
+}>
