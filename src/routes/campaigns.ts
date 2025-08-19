@@ -35,7 +35,8 @@ export async function campaignRoutes(fastify: FastifyInstance) {
     ruleRepository
   )
   const updateCampaignUseCase = new UpdateCampaignUseCaseImpl(
-    campaignRepository
+    campaignRepository,
+    ruleRepository
   )
   const deleteCampaignUseCase = new DeleteCampaignUseCaseImpl(
     campaignRepository,

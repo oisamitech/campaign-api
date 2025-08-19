@@ -311,6 +311,12 @@ export const updateCampaignBodySchema = {
       enum: ['ACTIVE', 'INACTIVE', 'PAUSED'],
       description: 'Campaign status (optional)',
     },
+    rules: {
+      type: 'array',
+      description: 'Array of campaign rules (optional - replaces all existing rules)',
+      items: createCampaignRuleSchema,
+      minItems: 1,
+    },
   },
   additionalProperties: false,
   minProperties: 1,
