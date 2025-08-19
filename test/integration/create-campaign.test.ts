@@ -13,7 +13,6 @@ describe('Create Campaign Integration Tests', () => {
     const authKey = env.BEARER_AUTH_KEY?.split(',')[0] || 'test-token'
     return {
       authorization: `Bearer ${authKey}`,
-      'content-type': 'application/json',
     }
   }
 
@@ -134,6 +133,8 @@ describe('Create Campaign Integration Tests', () => {
       const payload = {
         ...getValidCampaignPayload(),
         name: 'Campaign with Multiple Rules',
+        startDate: '2025-01-01T00:00:00.000Z',
+        endDate: '2025-06-30T23:59:59.000Z',
         rules: [
           {
             minLives: 1,
@@ -194,6 +195,8 @@ describe('Create Campaign Integration Tests', () => {
         ...getValidCampaignPayload(),
         isDefault: true,
         name: 'Default Campaign Test',
+        startDate: '2025-07-01T00:00:00.000Z',
+        endDate: '2025-12-31T23:59:59.000Z',
       }
 
       const response = await app.inject({
@@ -213,8 +216,8 @@ describe('Create Campaign Integration Tests', () => {
     it('should create a campaign with minimal valid data', async () => {
       const payload = {
         name: 'Minimal Campaign',
-        startDate: '2024-07-01T00:00:00.000Z',
-        endDate: '2024-07-02T00:00:00.000Z',
+        startDate: '2026-01-01T00:00:00.000Z',
+        endDate: '2026-01-02T00:00:00.000Z',
         rules: [
           {
             minLives: 1,
@@ -247,8 +250,8 @@ describe('Create Campaign Integration Tests', () => {
     it('should create a campaign with maximum valid data', async () => {
       const payload = {
         name: 'A'.repeat(255), // máximo de caracteres
-        startDate: '2024-01-01T00:00:00.000Z',
-        endDate: '2025-12-31T23:59:59.000Z',
+        startDate: '2026-02-01T00:00:00.000Z',
+        endDate: '2026-12-31T23:59:59.000Z',
         isDefault: false,
         status: 'ACTIVE',
         rules: [
@@ -546,19 +549,39 @@ describe('Create Campaign Integration Tests', () => {
 
   describe('POST /api/campaigns - Business Logic Tests', () => {
     it('should handle concurrent campaign creation requests', async () => {
+      const currentDate = new Date()
+
       const payload1 = {
         ...getValidCampaignPayload(),
         name: 'Concurrent Campaign 1',
+        startDate: new Date(
+          currentDate.getTime() + 1 * 24 * 60 * 60 * 1000
+        ).toISOString(), // +1 dia
+        endDate: new Date(
+          currentDate.getTime() + 31 * 24 * 60 * 60 * 1000
+        ).toISOString(), // +31 dias
       }
 
       const payload2 = {
         ...getValidCampaignPayload(),
         name: 'Concurrent Campaign 2',
+        startDate: new Date(
+          currentDate.getTime() + 40 * 24 * 60 * 60 * 1000
+        ).toISOString(), // +40 dias
+        endDate: new Date(
+          currentDate.getTime() + 70 * 24 * 60 * 60 * 1000
+        ).toISOString(), // +70 dias
       }
 
       const payload3 = {
         ...getValidCampaignPayload(),
         name: 'Concurrent Campaign 3',
+        startDate: new Date(
+          currentDate.getTime() + 80 * 24 * 60 * 60 * 1000
+        ).toISOString(), // +80 dias
+        endDate: new Date(
+          currentDate.getTime() + 110 * 24 * 60 * 60 * 1000
+        ).toISOString(), // +110 dias
       }
 
       // Fazer requisições simultâneas
@@ -612,6 +635,17 @@ describe('Create Campaign Integration Tests', () => {
       campaignsInDb.forEach(campaign => {
         expect(campaign.rules).toHaveLength(1)
       })
+
+      // Verificar que as datas são diferentes para evitar sobreposição
+      const sortedCampaigns = campaignsInDb.sort(
+        (a, b) => a.startDate.getTime() - b.startDate.getTime()
+      )
+      expect(sortedCampaigns[0].endDate.getTime()).toBeLessThan(
+        sortedCampaigns[1].startDate.getTime()
+      )
+      expect(sortedCampaigns[1].endDate.getTime()).toBeLessThan(
+        sortedCampaigns[2].startDate.getTime()
+      )
     })
 
     it('should handle special characters in campaign name', async () => {
@@ -675,6 +709,323 @@ describe('Create Campaign Integration Tests', () => {
 
       const body = JSON.parse(response.body)
       expect(body.success).toBe(true)
+    })
+  })
+
+  describe('POST /api/campaigns - Date Overlap Validation Tests', () => {
+    it('should reject campaign creation when dates overlap with existing campaign - exact same dates', async () => {
+      // Primeiro, criar uma campanha existente
+      const existingCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'Existing Campaign',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-12-31T23:59:59.000Z',
+      }
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: existingCampaign,
+      })
+
+      // Tentar criar nova campanha com exatamente as mesmas datas
+      const newCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'New Campaign - Same Dates',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-12-31T23:59:59.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: newCampaign,
+      })
+
+      expect(response.statusCode).toBe(409)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Date Overlap Error')
+      expect(body.message).toContain('está em conflito com a campanha')
+      expect(body.message).toContain('Existing Campaign')
+    })
+
+    it('should reject campaign creation when new campaign starts during existing campaign', async () => {
+      // Criar campanha existente
+      const existingCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'Existing Campaign',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      }
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: existingCampaign,
+      })
+
+      // Nova campanha que começa durante a existente
+      const newCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'New Campaign - Start Overlap',
+        startDate: '2024-07-15T00:00:00.000Z',
+        endDate: '2024-10-31T23:59:59.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: newCampaign,
+      })
+
+      expect(response.statusCode).toBe(409)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Date Overlap Error')
+    })
+
+    it('should reject campaign creation when new campaign ends during existing campaign', async () => {
+      // Criar campanha existente
+      const existingCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'Existing Campaign',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      }
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: existingCampaign,
+      })
+
+      // Nova campanha que termina durante a existente
+      const newCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'New Campaign - End Overlap',
+        startDate: '2024-04-01T00:00:00.000Z',
+        endDate: '2024-07-15T23:59:59.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: newCampaign,
+      })
+
+      expect(response.statusCode).toBe(409)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Date Overlap Error')
+    })
+
+    it('should reject campaign creation when new campaign completely encompasses existing campaign', async () => {
+      // Criar campanha existente
+      const existingCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'Existing Campaign',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      }
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: existingCampaign,
+      })
+
+      // Nova campanha que engloba completamente a existente
+      const newCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'New Campaign - Encompasses Existing',
+        startDate: '2024-04-01T00:00:00.000Z',
+        endDate: '2024-10-31T23:59:59.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: newCampaign,
+      })
+
+      expect(response.statusCode).toBe(409)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Date Overlap Error')
+    })
+
+    it('should reject campaign creation when existing campaign completely encompasses new campaign', async () => {
+      // Criar campanha existente maior
+      const existingCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'Existing Campaign',
+        startDate: '2024-04-01T00:00:00.000Z',
+        endDate: '2024-10-31T23:59:59.000Z',
+      }
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: existingCampaign,
+      })
+
+      // Nova campanha menor, completamente dentro da existente
+      const newCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'New Campaign - Inside Existing',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: newCampaign,
+      })
+
+      expect(response.statusCode).toBe(409)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Date Overlap Error')
+    })
+
+    it('should allow campaign creation when dates do not overlap - before existing campaign', async () => {
+      // Criar campanha existente
+      const existingCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'Existing Campaign',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      }
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: existingCampaign,
+      })
+
+      // Nova campanha que termina antes da existente começar
+      const newCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'New Campaign - Before Existing',
+        startDate: '2024-04-01T00:00:00.000Z',
+        endDate: '2024-05-31T23:59:59.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: newCampaign,
+      })
+
+      expect(response.statusCode).toBe(201)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data.name).toBe(newCampaign.name)
+    })
+
+    it('should allow campaign creation when dates do not overlap - after existing campaign', async () => {
+      // Criar campanha existente
+      const existingCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'Existing Campaign',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      }
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: existingCampaign,
+      })
+
+      // Nova campanha que começa depois da existente terminar
+      const newCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'New Campaign - After Existing',
+        startDate: '2024-09-01T00:00:00.000Z',
+        endDate: '2024-11-30T23:59:59.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: newCampaign,
+      })
+
+      expect(response.statusCode).toBe(201)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data.name).toBe(newCampaign.name)
+    })
+
+    it('should not consider deleted campaigns for overlap validation', async () => {
+      // Criar campanha
+      const existingCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'Campaign to be deleted',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      }
+
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: existingCampaign,
+      })
+
+      const createdCampaign = JSON.parse(createResponse.body)
+      const campaignId = createdCampaign.data.id
+
+      // Deletar a campanha
+      await app.inject({
+        method: 'DELETE',
+        url: `/api/campaigns/${campaignId}`,
+        headers: getAuthHeaders(),
+      })
+
+      const newCampaign = {
+        ...getValidCampaignPayload(),
+        name: 'New Campaign - Same Dates as Deleted',
+        startDate: '2024-06-01T00:00:00.000Z',
+        endDate: '2024-08-31T23:59:59.000Z',
+      }
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: newCampaign,
+      })
+
+      expect(response.statusCode).toBe(201)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data.name).toBe(newCampaign.name)
     })
   })
 })

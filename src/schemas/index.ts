@@ -104,7 +104,30 @@ export const successResponseSchema = {
   additionalProperties: true,
 }
 
-// Exportar schemas existentes
+export const errorResponseSchema = {
+  type: 'object',
+  properties: {
+    statusCode: {
+      type: 'number',
+      description: 'HTTP status code',
+    },
+    success: {
+      type: 'boolean',
+      description: 'Whether the operation was successful',
+    },
+    error: {
+      type: 'string',
+      description: 'Error type',
+    },
+    message: {
+      type: 'string',
+      description: 'Descriptive error message',
+    },
+  },
+  required: ['statusCode', 'success', 'error', 'message'],
+  additionalProperties: false,
+}
+
 export * from './campaigns.js'
 export * from './rules.js'
 export * from './health.js'
