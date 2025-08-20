@@ -80,15 +80,19 @@ export class UpdateCampaignUseCaseImpl implements UpdateCampaignUseCase {
     const hasDateChanges =
       updateParams.startDate !== undefined || updateParams.endDate !== undefined
 
-    if (hasDateChanges) {
+      const hasTypeChange = updateParams.isDefault !== undefined
+
+    if (hasDateChanges || hasTypeChange) {
       const newStartDate = updateParams.startDate ?? existingCampaign.startDate
       const newEndDate = updateParams.endDate ?? existingCampaign.endDate
+      const newIsDefault = updateParams.isDefault ?? existingCampaign.isDefault
 
       const overlappingCampaigns =
         await this.campaignRepository.findOverlappingCampaigns(
           newStartDate,
           newEndDate,
-          id
+          id,
+          newIsDefault
         )
 
       if (overlappingCampaigns.length > 0) {
