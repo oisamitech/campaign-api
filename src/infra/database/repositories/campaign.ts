@@ -68,7 +68,8 @@ export interface CampaignRepository {
   findOverlappingCampaigns(
     startDate: Date,
     endDate: Date,
-    excludeId?: string
+    excludeId?: string,
+    isDefault?: boolean
   ): Promise<Campaign[]>
 }
 
@@ -231,12 +232,14 @@ export class PrismaCampaignRepository implements CampaignRepository {
   async findOverlappingCampaigns(
     startDate: Date,
     endDate: Date,
-    excludeId?: string
+    excludeId?: string,
+    isDefault?: boolean
   ): Promise<Campaign[]> {
     return this.prisma.campaign.findMany({
       where: {
         deletedAt: null,
         ...(excludeId && { id: { not: BigInt(excludeId) } }),
+        ...(isDefault && { isDefault: true }),
         startDate: { lte: endDate },
         endDate: { gte: startDate },
       },

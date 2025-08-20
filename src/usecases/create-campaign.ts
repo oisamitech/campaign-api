@@ -77,7 +77,9 @@ export class CreateCampaignUseCaseImpl implements CreateCampaignUseCase {
       const overlappingCampaigns =
         await this.campaignRepository.findOverlappingCampaigns(
           startDate,
-          endDate
+          endDate,
+          undefined,
+          request.isDefault
         )
 
       if (overlappingCampaigns.length > 0) {
