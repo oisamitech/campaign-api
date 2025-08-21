@@ -35,7 +35,8 @@ export async function campaignRoutes(fastify: FastifyInstance) {
     ruleRepository
   )
   const updateCampaignUseCase = new UpdateCampaignUseCaseImpl(
-    campaignRepository
+    campaignRepository,
+    ruleRepository
   )
   const deleteCampaignUseCase = new DeleteCampaignUseCaseImpl(
     campaignRepository,
@@ -95,6 +96,16 @@ export async function campaignRoutes(fastify: FastifyInstance) {
         })
       } catch (error: unknown) {
         console.error('Error creating campaign:', error)
+
+        if (error instanceof Error && error.name === 'DateOverlapError') {
+          return reply.status(409).send({
+            statusCode: 409,
+            success: false,
+            error: 'Date Overlap Error',
+            message: error.message,
+          })
+        }
+
         return reply.status(500).send({
           statusCode: 500,
           success: false,
@@ -123,12 +134,23 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           data: result,
         })
       } catch (error: unknown) {
+        console.error('Error updating campaign:', error)
+
         if (error instanceof Error && error.message === 'Campaign not found') {
           return reply.status(404).send({
             statusCode: 404,
             success: false,
             error: 'Not Found',
             message: 'Campaign not found',
+          })
+        }
+
+        if (error instanceof Error && error.name === 'DateOverlapError') {
+          return reply.status(409).send({
+            statusCode: 409,
+            success: false,
+            error: 'Date Overlap Error',
+            message: error.message,
           })
         }
 

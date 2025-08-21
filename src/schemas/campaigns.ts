@@ -1,5 +1,6 @@
 import { FastifySchema } from 'fastify'
 import { ruleSchema, createCampaignRuleSchema } from './rules.js'
+import { errorResponseSchema } from './index.js'
 
 export const listCampaignsQuerySchema = {
   type: 'object',
@@ -56,7 +57,6 @@ export const paginationMetaSchema = {
   additionalProperties: false,
 }
 
-// Schema da campanha com regras
 export const campaignSchema = {
   type: 'object',
   properties: {
@@ -135,31 +135,6 @@ export const listCampaignsResponseSchema = {
   additionalProperties: false,
 }
 
-export const errorResponseSchema = {
-  type: 'object',
-  properties: {
-    statusCode: {
-      type: 'number',
-      description: 'HTTP status code',
-    },
-    success: {
-      type: 'boolean',
-      description: 'Whether the operation was successful',
-    },
-    error: {
-      type: 'string',
-      description: 'Error type',
-    },
-    message: {
-      type: 'string',
-      description: 'Descriptive error message',
-    },
-  },
-  required: ['statusCode', 'success', 'error', 'message'],
-  additionalProperties: false,
-}
-
-// Schema para criação de campanha com regras obrigatórias
 export const createCampaignBodySchema = {
   type: 'object',
   properties: {
@@ -254,7 +229,6 @@ export const updateCampaignParamsSchema = {
   additionalProperties: false,
 }
 
-// Schema de resposta simples da campanha (sem regras)
 export const simpleCampaignSchema = {
   type: 'object',
   properties: {
@@ -309,7 +283,6 @@ export const simpleCampaignSchema = {
   additionalProperties: false,
 }
 
-// Schema para atualização de campanha (apenas dados básicos)
 export const updateCampaignBodySchema = {
   type: 'object',
   properties: {
@@ -337,6 +310,13 @@ export const updateCampaignBodySchema = {
       type: 'string',
       enum: ['ACTIVE', 'INACTIVE', 'PAUSED'],
       description: 'Campaign status (optional)',
+    },
+    rules: {
+      type: 'array',
+      description:
+        'Array of campaign rules (optional - replaces all existing rules)',
+      items: createCampaignRuleSchema,
+      minItems: 1,
     },
   },
   additionalProperties: false,
@@ -379,6 +359,11 @@ export const createCampaignSchema: FastifySchema = {
       description: 'Unauthorized - Bearer token required or invalid',
       ...errorResponseSchema,
     },
+    409: {
+      description:
+        'Date overlap conflict - Campaign dates overlap with existing campaign',
+      ...errorResponseSchema,
+    },
     500: {
       description: 'Internal server error',
       ...errorResponseSchema,
@@ -412,6 +397,11 @@ export const updateCampaignSchema: FastifySchema = {
     },
     404: {
       description: 'Campaign not found',
+      ...errorResponseSchema,
+    },
+    409: {
+      description:
+        'Date overlap conflict - Campaign dates overlap with existing campaign',
       ...errorResponseSchema,
     },
     500: {

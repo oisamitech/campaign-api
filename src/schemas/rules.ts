@@ -1,4 +1,5 @@
 // Schema para uma regra individual
+import { errorResponseSchema } from './index.js'
 export const ruleSchema = {
   type: 'object',
   properties: {
@@ -165,4 +166,141 @@ export const createCampaignRuleSchema = {
     'obstetrics',
   ],
   additionalProperties: false,
+}
+
+// Schema para atualização de regra (atualização parcial)
+export const updateRuleBodySchema = {
+  type: 'object',
+  properties: {
+    minLives: {
+      type: 'number',
+      description: 'Minimum number of lives (must be positive, optional)',
+      minimum: 1,
+    },
+    maxLives: {
+      type: 'number',
+      description: 'Maximum number of lives (must be positive, optional)',
+      minimum: 1,
+    },
+    plans: {
+      type: 'array',
+      description: 'Array of available plans (positive numbers, optional)',
+      items: {
+        type: 'number',
+        minimum: 1,
+      },
+      minItems: 1,
+    },
+    value: {
+      type: 'number',
+      description: 'Rule value (percentage from 1 to 100, optional)',
+      minimum: 1,
+      maximum: 100,
+    },
+    paymentMethod: {
+      type: 'array',
+      description: 'Array of accepted payment methods (optional)',
+      items: {
+        type: 'string',
+        enum: ['PIX', 'BANKSLIP', 'CREDITCARD'],
+      },
+      minItems: 1,
+      uniqueItems: true,
+    },
+    accommodation: {
+      type: 'array',
+      description: 'Array of accommodation types (optional)',
+      items: {
+        type: 'string',
+        enum: ['INFIRMARY', 'APARTMENT'],
+      },
+      minItems: 1,
+      uniqueItems: true,
+    },
+    typeProduct: {
+      type: 'array',
+      description: 'Array of product types (optional)',
+      items: {
+        type: 'string',
+        enum: ['withParticipation', 'withoutParticipation'],
+      },
+      minItems: 1,
+      uniqueItems: true,
+    },
+    obstetrics: {
+      type: 'array',
+      description: 'Array of obstetric options (optional)',
+      items: {
+        type: 'string',
+        enum: ['withObstetric', 'withoutObstetric'],
+      },
+      minItems: 1,
+      uniqueItems: true,
+    },
+  },
+  additionalProperties: false,
+  minProperties: 1,
+}
+
+// Schema para parâmetros da rota de atualização
+export const updateRuleParamsSchema = {
+  type: 'object',
+  properties: {
+    id: {
+      type: 'string',
+      description: 'Rule ID',
+    },
+  },
+  required: ['id'],
+  additionalProperties: false,
+}
+
+// Schema para resposta de atualização
+export const updateRuleResponseSchema = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether the operation was successful',
+    },
+    data: ruleSchema,
+  },
+  required: ['success', 'data'],
+  additionalProperties: false,
+}
+
+// Schema completo para a rota PATCH /rules/:id
+export const updateRuleSchema = {
+  description: 'Update an existing rule',
+  tags: ['Rules'],
+  summary: 'Update rule',
+  security: [
+    {
+      bearerAuth: [],
+    },
+  ],
+  params: updateRuleParamsSchema,
+  body: updateRuleBodySchema,
+  response: {
+    200: {
+      description: 'Rule updated successfully',
+      ...updateRuleResponseSchema,
+    },
+    400: {
+      description: 'Invalid request data',
+      ...errorResponseSchema,
+    },
+    401: {
+      description: 'Unauthorized',
+      ...errorResponseSchema,
+    },
+    404: {
+      description: 'Rule not found',
+      ...errorResponseSchema,
+    },
+    500: {
+      description: 'Internal server error',
+      ...errorResponseSchema,
+    },
+  },
 }

@@ -1,10 +1,14 @@
-FROM node:22.5.1-alpine
-
+FROM node:22.5.1-slim
 
 LABEL maintainer="Sami Tech Team <tech@samisaude.com>"
 
 ARG NPM_TOKEN=$NPM_TOKEN
 
+# Install necessary packages
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
 WORKDIR /usr/src/app

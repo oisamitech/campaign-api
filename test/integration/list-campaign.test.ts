@@ -366,4 +366,290 @@ describe('List Campaigns Integration Tests', () => {
       }
     })
   })
+
+  describe('Campaign Ordering Tests', () => {
+    beforeEach(async () => {
+      // Limpar dados existentes
+      await prisma.rule.deleteMany()
+      await prisma.campaign.deleteMany()
+
+      // Criar campanhas com diferentes datas para testar ordenação
+      const currentDate = new Date()
+
+      // Campanha ativa 1 (mais recente)
+      const activeCampaign1 = await prisma.campaign.create({
+        data: {
+          name: 'Active Campaign Recent',
+          startDate: new Date(currentDate.getTime() - 10 * 24 * 60 * 60 * 1000), // 10 dias atrás
+          endDate: new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 dias no futuro
+          isDefault: false,
+          status: 'ACTIVE',
+        },
+      })
+
+      // Campanha ativa 2 (mais antiga)
+      const activeCampaign2 = await prisma.campaign.create({
+        data: {
+          name: 'Active Campaign Old',
+          startDate: new Date(currentDate.getTime() - 30 * 24 * 60 * 60 * 1000), // 30 dias atrás
+          endDate: new Date(currentDate.getTime() + 10 * 24 * 60 * 60 * 1000), // 10 dias no futuro
+          isDefault: false,
+          status: 'ACTIVE',
+        },
+      })
+
+      // Campanha inativa 1 (mais antiga)
+      const inactiveCampaign1 = await prisma.campaign.create({
+        data: {
+          name: 'Inactive Campaign Old',
+          startDate: new Date(currentDate.getTime() - 90 * 24 * 60 * 60 * 1000), // 90 dias atrás
+          endDate: new Date(currentDate.getTime() - 60 * 24 * 60 * 60 * 1000), // 60 dias atrás
+          isDefault: false,
+          status: 'INACTIVE',
+        },
+      })
+
+      // Campanha inativa 2 (mais recente)
+      const inactiveCampaign2 = await prisma.campaign.create({
+        data: {
+          name: 'Inactive Campaign Recent',
+          startDate: new Date(currentDate.getTime() - 60 * 24 * 60 * 60 * 1000), // 60 dias atrás
+          endDate: new Date(currentDate.getTime() - 30 * 24 * 60 * 60 * 1000), // 30 dias atrás
+          isDefault: false,
+          status: 'INACTIVE',
+        },
+      })
+
+      // Campanha futura (inativa)
+      await prisma.campaign.create({
+        data: {
+          name: 'Future Campaign',
+          startDate: new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 dias no futuro
+          endDate: new Date(currentDate.getTime() + 60 * 24 * 60 * 60 * 1000), // 60 dias no futuro
+          isDefault: false,
+          status: 'ACTIVE',
+        },
+      })
+
+      // Adicionar regras para as campanhas (para manter compatibilidade)
+      const campaigns = [
+        activeCampaign1,
+        activeCampaign2,
+        inactiveCampaign1,
+        inactiveCampaign2,
+      ]
+      for (const campaign of campaigns) {
+        await prisma.rule.create({
+          data: {
+            campaignId: campaign.id,
+            minLives: 1,
+            maxLives: 10,
+            plans: [1, 2],
+            value: 10,
+            paymentMethod: ['PIX'],
+            accommodation: ['APARTMENT'],
+            typeProduct: ['withParticipation'],
+            obstetrics: ['withObstetric'],
+          },
+        })
+      }
+    })
+
+    it('should return campaigns ordered with active campaigns first (most recent to oldest), then inactive campaigns (oldest to most recent)', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data).toHaveLength(5) // 5 campanhas criadas
+
+      const campaigns = body.data
+      const currentDate = new Date()
+
+      // Separar campanhas ativas e inativas baseado nas datas
+      const activeCampaigns = campaigns.filter((campaign: any) => {
+        const startDate = new Date(campaign.startDate)
+        const endDate = new Date(campaign.endDate)
+        return startDate <= currentDate && endDate >= currentDate
+      })
+
+      const inactiveCampaigns = campaigns.filter((campaign: any) => {
+        const startDate = new Date(campaign.startDate)
+        const endDate = new Date(campaign.endDate)
+        return !(startDate <= currentDate && endDate >= currentDate)
+      })
+
+      // Verificar que temos campanhas ativas e inativas
+      expect(activeCampaigns.length).toBe(2)
+      expect(inactiveCampaigns.length).toBe(3)
+
+      // Verificar que campanhas ativas vêm primeiro
+      const firstTwoCampaigns = campaigns.slice(0, 2)
+      const lastThreeCampaigns = campaigns.slice(2, 5)
+
+      // Todas as primeiras devem ser ativas
+      firstTwoCampaigns.forEach((campaign: any) => {
+        const startDate = new Date(campaign.startDate)
+        const endDate = new Date(campaign.endDate)
+        expect(startDate <= currentDate && endDate >= currentDate).toBe(true)
+      })
+
+      // Todas as últimas devem ser inativas
+      lastThreeCampaigns.forEach((campaign: any) => {
+        const startDate = new Date(campaign.startDate)
+        const endDate = new Date(campaign.endDate)
+        expect(startDate <= currentDate && endDate >= currentDate).toBe(false)
+      })
+
+      // Verificar ordenação das campanhas ativas (mais recente para mais antiga)
+      expect(firstTwoCampaigns[0].name).toBe('Active Campaign Recent')
+      expect(firstTwoCampaigns[1].name).toBe('Active Campaign Old')
+
+      // Verificar ordenação das campanhas inativas (mais antiga para mais recente)
+      expect(lastThreeCampaigns[0].name).toBe('Inactive Campaign Old')
+      expect(lastThreeCampaigns[1].name).toBe('Inactive Campaign Recent')
+      expect(lastThreeCampaigns[2].name).toBe('Future Campaign')
+    })
+
+    it('should maintain correct ordering when there are only active campaigns', async () => {
+      // Limpar dados e criar apenas campanhas ativas
+      await prisma.rule.deleteMany()
+      await prisma.campaign.deleteMany()
+
+      const currentDate = new Date()
+
+      const campaigns = [
+        {
+          name: 'Active Campaign 1',
+          startDate: new Date(currentDate.getTime() - 5 * 24 * 60 * 60 * 1000), // 5 dias atrás
+          endDate: new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 dias no futuro
+        },
+        {
+          name: 'Active Campaign 2',
+          startDate: new Date(currentDate.getTime() - 20 * 24 * 60 * 60 * 1000), // 20 dias atrás
+          endDate: new Date(currentDate.getTime() + 15 * 24 * 60 * 60 * 1000), // 15 dias no futuro
+        },
+        {
+          name: 'Active Campaign 3',
+          startDate: new Date(currentDate.getTime() - 10 * 24 * 60 * 60 * 1000), // 10 dias atrás
+          endDate: new Date(currentDate.getTime() + 20 * 24 * 60 * 60 * 1000), // 20 dias no futuro
+        },
+      ]
+
+      for (const campaignData of campaigns) {
+        const campaign = await prisma.campaign.create({
+          data: {
+            ...campaignData,
+            isDefault: false,
+            status: 'ACTIVE',
+          },
+        })
+
+        await prisma.rule.create({
+          data: {
+            campaignId: campaign.id,
+            minLives: 1,
+            maxLives: 10,
+            plans: [1],
+            value: 10,
+            paymentMethod: ['PIX'],
+            accommodation: ['APARTMENT'],
+            typeProduct: ['withParticipation'],
+            obstetrics: ['withObstetric'],
+          },
+        })
+      }
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      const responseCampaigns = body.data
+
+      expect(responseCampaigns).toHaveLength(3)
+
+      // Verificar ordenação: mais recente para mais antiga (por startDate)
+      expect(responseCampaigns[0].name).toBe('Active Campaign 1') // -5 dias (mais recente)
+      expect(responseCampaigns[1].name).toBe('Active Campaign 3') // -10 dias
+      expect(responseCampaigns[2].name).toBe('Active Campaign 2') // -20 dias (mais antiga)
+    })
+
+    it('should maintain correct ordering when there are only inactive campaigns', async () => {
+      // Limpar dados e criar apenas campanhas inativas
+      await prisma.rule.deleteMany()
+      await prisma.campaign.deleteMany()
+
+      const currentDate = new Date()
+
+      const campaigns = [
+        {
+          name: 'Inactive Campaign 1',
+          startDate: new Date(currentDate.getTime() - 60 * 24 * 60 * 60 * 1000), // 60 dias atrás
+          endDate: new Date(currentDate.getTime() - 30 * 24 * 60 * 60 * 1000), // 30 dias atrás
+        },
+        {
+          name: 'Inactive Campaign 2',
+          startDate: new Date(currentDate.getTime() - 90 * 24 * 60 * 60 * 1000), // 90 dias atrás
+          endDate: new Date(currentDate.getTime() - 60 * 24 * 60 * 60 * 1000), // 60 dias atrás
+        },
+        {
+          name: 'Future Campaign',
+          startDate: new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 dias no futuro
+          endDate: new Date(currentDate.getTime() + 60 * 24 * 60 * 60 * 1000), // 60 dias no futuro
+        },
+      ]
+
+      for (const campaignData of campaigns) {
+        const campaign = await prisma.campaign.create({
+          data: {
+            ...campaignData,
+            isDefault: false,
+            status: 'INACTIVE',
+          },
+        })
+
+        await prisma.rule.create({
+          data: {
+            campaignId: campaign.id,
+            minLives: 1,
+            maxLives: 10,
+            plans: [1],
+            value: 10,
+            paymentMethod: ['PIX'],
+            accommodation: ['APARTMENT'],
+            typeProduct: ['withParticipation'],
+            obstetrics: ['withObstetric'],
+          },
+        })
+      }
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      const responseCampaigns = body.data
+
+      expect(responseCampaigns).toHaveLength(3)
+
+      // Verificar ordenação: mais antiga para mais recente (por startDate)
+      expect(responseCampaigns[0].name).toBe('Inactive Campaign 2') // -90 dias (mais antiga)
+      expect(responseCampaigns[1].name).toBe('Inactive Campaign 1') // -60 dias
+      expect(responseCampaigns[2].name).toBe('Future Campaign') // +30 dias (mais recente)
+    })
+  })
 })
