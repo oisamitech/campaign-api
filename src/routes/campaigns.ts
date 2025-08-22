@@ -73,7 +73,7 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           success: true,
           ...result,
         })
-      } catch (error: unknown) {
+      } catch {
         return reply.status(500).send({
           statusCode: 500,
           success: false,
