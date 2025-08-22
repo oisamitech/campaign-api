@@ -4,6 +4,7 @@ import {
   RuleRepository,
   CreateRuleParams,
 } from '../infra/database/repositories/index.js'
+import { logger } from '../config/logger.js'
 
 export interface CreateCampaignRequest {
   name: string
@@ -89,7 +90,7 @@ export class CreateCampaignUseCaseImpl implements CreateCampaignUseCase {
         )
       }
     } catch (error) {
-      console.error('Erro na verificação de sobreposição:', error)
+      logger.error({ error }, 'Erro na verificação de sobreposição')
       throw error
     }
 

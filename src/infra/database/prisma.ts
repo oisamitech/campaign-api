@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { env } from '../../config/env.js'
+import { logger } from '../../config/logger.js'
 
 const log: Record<string, ('warn' | 'error')[]> = {
   local: ['warn', 'error'],
@@ -21,9 +22,9 @@ export const prisma = new PrismaClient({
 export async function disconnectDatabase() {
   try {
     await prisma.$disconnect()
-    console.log('✅ Database disconnected successfully')
+    logger.info('Database disconnected successfully')
   } catch (error) {
-    console.error('❌ Database disconnection failed:', error)
+    logger.error({ error }, 'Database disconnection failed')
     throw error
   }
 }

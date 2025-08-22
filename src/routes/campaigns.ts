@@ -73,7 +73,8 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           success: true,
           ...result,
         })
-      } catch {
+      } catch (error: unknown) {
+        fastify.log.error({ error }, 'Error listing campaigns')
         return reply.status(500).send({
           statusCode: 500,
           success: false,
@@ -100,6 +101,7 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           data: result,
         })
       } catch (error: unknown) {
+        fastify.log.error({ error }, 'Error creating campaign')
         if (error instanceof Error && error.name === 'DateOverlapError') {
           return reply.status(409).send({
             statusCode: 409,
@@ -137,6 +139,7 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           data: result,
         })
       } catch (error: unknown) {
+        fastify.log.error({ error }, 'Error updating campaign')
         if (error instanceof Error && error.message === 'Campaign not found') {
           return reply.status(404).send({
             statusCode: 404,

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { logger } from '../../../config/logger.js'
 
 export interface Rule {
   id: bigint
@@ -73,7 +74,7 @@ export class PrismaRuleRepository implements RuleRepository {
       })
       return rule as Rule | null
     } catch (error) {
-      console.error('Error finding rule by id', error)
+      logger.error({ error }, 'Error finding rule by id')
       return null
     }
   }
