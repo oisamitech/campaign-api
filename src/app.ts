@@ -3,6 +3,8 @@ import { env } from './config/env.js'
 import { configureFastify } from './infra/fastify-config.js'
 import { errorHandler, requestLogger } from './infra/hooks/index.js'
 import { registerRoutes } from './routes/index.js'
+import './infra/telemetry/index.js'
+
 
 export async function createApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
