@@ -6,8 +6,9 @@ export function isWithin30DaysAfterEnd(
   const proposalTime = proposalDate.getTime()
   const startTime = campaignStartDate.getTime()
   const endTime = campaignEndDate.getTime()
-  
-  const wasActiveOnProposalDate = proposalTime >= startTime && proposalTime <= endTime
+
+  const wasActiveOnProposalDate =
+    proposalTime >= startTime && proposalTime <= endTime
 
   if (!wasActiveOnProposalDate) {
     return false
@@ -27,4 +28,4 @@ export function parseISODate(dateString: string): Date | null {
   } catch {
     return null
   }
-} 
+}

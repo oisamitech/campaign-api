@@ -17,7 +17,11 @@ describe('Get Active Campaign Integration Tests', () => {
   }
 
   // Helper function para criar campanha específica
-  const createSpecificCampaign = async (name: string, startDate: Date, endDate: Date) => {
+  const createSpecificCampaign = async (
+    name: string,
+    startDate: Date,
+    endDate: Date
+  ) => {
     const campaign = await prisma.campaign.create({
       data: {
         name,
@@ -46,7 +50,11 @@ describe('Get Active Campaign Integration Tests', () => {
   }
 
   // Helper function para criar campanha padrão
-  const createDefaultCampaign = async (name: string, startDate: Date, endDate: Date) => {
+  const createDefaultCampaign = async (
+    name: string,
+    startDate: Date,
+    endDate: Date
+  ) => {
     const campaign = await prisma.campaign.create({
       data: {
         name,
@@ -91,7 +99,7 @@ describe('Get Active Campaign Integration Tests', () => {
 
     // Aguardar conexão
     await prisma.$connect()
-    console.log('✅ Conectado ao banco MySQL para testes de campanha ativa')
+
   })
 
   beforeEach(async () => {
@@ -107,11 +115,11 @@ describe('Get Active Campaign Integration Tests', () => {
 
     // Desconectar
     await prisma.$disconnect()
-    console.log('✅ Desconectado do banco MySQL')
+
 
     // Fechar aplicação
     await app.close()
-    console.log('✅ Aplicação Fastify fechada')
+
   })
 
   describe('GET /api/campaigns/active - Success Cases (200)', () => {
@@ -121,7 +129,11 @@ describe('Get Active Campaign Integration Tests', () => {
       const endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 dias no futuro
 
       // Criar campanha específica ativa
-      const specificCampaign = await createSpecificCampaign('Campanha Específica', startDate, endDate)
+      const specificCampaign = await createSpecificCampaign(
+        'Campanha Específica',
+        startDate,
+        endDate
+      )
 
       // Criar campanha padrão ativa
       await createDefaultCampaign('Campanha Padrão', startDate, endDate)
@@ -149,7 +161,11 @@ describe('Get Active Campaign Integration Tests', () => {
       const activeEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
 
       // Criar apenas campanha padrão ativa
-      const defaultCampaign = await createDefaultCampaign('Campanha Padrão Única', activeStart, activeEnd)
+      const defaultCampaign = await createDefaultCampaign(
+        'Campanha Padrão Única',
+        activeStart,
+        activeEnd
+      )
 
       const response = await app.inject({
         method: 'GET',
@@ -171,16 +187,24 @@ describe('Get Active Campaign Integration Tests', () => {
     it('should return specific campaign by proposalDate within 30 days (1st priority)', async () => {
       const now = new Date()
       const proposalDate = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000) // 15 dias atrás
-      
+
       // Campanha específica que estava ativa na proposalDate (mas já expirou, dentro dos 30 dias)
       const expiredStart = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000) // 20 dias atrás
       const expiredEnd = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000) // 5 dias atrás
-      const expiredCampaign = await createSpecificCampaign('Campanha Específica Expirada', expiredStart, expiredEnd)
+      const expiredCampaign = await createSpecificCampaign(
+        'Campanha Específica Expirada',
+        expiredStart,
+        expiredEnd
+      )
 
       // Campanha específica ativa atualmente
       const currentStart = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)
       const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      await createSpecificCampaign('Campanha Específica Atual', currentStart, currentEnd)
+      await createSpecificCampaign(
+        'Campanha Específica Atual',
+        currentStart,
+        currentEnd
+      )
 
       const response = await app.inject({
         method: 'GET',
@@ -201,11 +225,15 @@ describe('Get Active Campaign Integration Tests', () => {
     it('should ignore proposalDate if no specific campaign was active on that date', async () => {
       const now = new Date()
       const proposalDate = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000) // 60 dias atrás (nenhuma campanha ativa)
-      
+
       // Campanha específica ativa atualmente
       const currentStart = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)
       const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      const currentCampaign = await createSpecificCampaign('Campanha Específica Atual', currentStart, currentEnd)
+      const currentCampaign = await createSpecificCampaign(
+        'Campanha Específica Atual',
+        currentStart,
+        currentEnd
+      )
 
       const response = await app.inject({
         method: 'GET',
@@ -224,16 +252,24 @@ describe('Get Active Campaign Integration Tests', () => {
     it('should ignore proposalDate if specific campaign is outside 30-day window', async () => {
       const now = new Date()
       const proposalDate = new Date(now.getTime() - 50 * 24 * 60 * 60 * 1000) // 50 dias atrás
-      
+
       // Campanha específica que estava ativa na proposalDate mas está fora dos 30 dias
       const oldStart = new Date(now.getTime() - 55 * 24 * 60 * 60 * 1000)
       const oldEnd = new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000)
-      await createSpecificCampaign('Campanha Específica Muito Antiga', oldStart, oldEnd)
+      await createSpecificCampaign(
+        'Campanha Específica Muito Antiga',
+        oldStart,
+        oldEnd
+      )
 
       // Campanha padrão ativa atualmente
       const currentStart = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)
       const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      const defaultCampaign = await createDefaultCampaign('Campanha Padrão Atual', currentStart, currentEnd)
+      const defaultCampaign = await createDefaultCampaign(
+        'Campanha Padrão Atual',
+        currentStart,
+        currentEnd
+      )
 
       const response = await app.inject({
         method: 'GET',
@@ -255,7 +291,11 @@ describe('Get Active Campaign Integration Tests', () => {
       const startDate = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)
       const endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
 
-      await createSpecificCampaign('Test Campaign Structure', startDate, endDate)
+      await createSpecificCampaign(
+        'Test Campaign Structure',
+        startDate,
+        endDate
+      )
 
       const response = await app.inject({
         method: 'GET',
@@ -347,7 +387,11 @@ describe('Get Active Campaign Integration Tests', () => {
       const expiredStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
       const expiredEnd = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-      await createSpecificCampaign('Campanha Expirada', expiredStart, expiredEnd)
+      await createSpecificCampaign(
+        'Campanha Expirada',
+        expiredStart,
+        expiredEnd
+      )
 
       const response = await app.inject({
         method: 'GET',
@@ -372,7 +416,11 @@ describe('Get Active Campaign Integration Tests', () => {
       // Campanha específica que estava ativa na proposalDate
       const proposalStart = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000)
       const proposalEnd = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
-      const proposalCampaign = await createSpecificCampaign('Campanha da Proposal', proposalStart, proposalEnd)
+      const proposalCampaign = await createSpecificCampaign(
+        'Campanha da Proposal',
+        proposalStart,
+        proposalEnd
+      )
 
       // Campanha específica ativa atualmente
       const currentStart = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
@@ -401,7 +449,11 @@ describe('Get Active Campaign Integration Tests', () => {
       await createDefaultCampaign('Campanha Padrão', startDate, endDate)
 
       // Criar campanha específica ativa
-      const specificCampaign = await createSpecificCampaign('Campanha Específica', startDate, endDate)
+      const specificCampaign = await createSpecificCampaign(
+        'Campanha Específica',
+        startDate,
+        endDate
+      )
 
       const response = await app.inject({
         method: 'GET',
@@ -424,12 +476,20 @@ describe('Get Active Campaign Integration Tests', () => {
       // Campanha padrão que estava ativa na proposalDate
       const proposalStart = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000)
       const proposalEnd = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
-      await createDefaultCampaign('Campanha Padrão da Proposal', proposalStart, proposalEnd)
+      await createDefaultCampaign(
+        'Campanha Padrão da Proposal',
+        proposalStart,
+        proposalEnd
+      )
 
       // Campanha específica ativa atualmente
       const currentStart = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
       const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      const currentCampaign = await createSpecificCampaign('Campanha Específica Atual', currentStart, currentEnd)
+      const currentCampaign = await createSpecificCampaign(
+        'Campanha Específica Atual',
+        currentStart,
+        currentEnd
+      )
 
       const response = await app.inject({
         method: 'GET',
@@ -456,11 +516,12 @@ describe('Get Active Campaign Integration Tests', () => {
       // Criar primeira campanha específica
       await createSpecificCampaign('Primeira Específica', startDate, endDate)
 
-      // Aguardar um pouco para garantir createdAt diferente
-      await new Promise(resolve => setTimeout(resolve, 10))
-
       // Criar segunda campanha específica (mais recente)
-      const recentCampaign = await createSpecificCampaign('Segunda Específica', startDate, endDate)
+      const recentCampaign = await createSpecificCampaign(
+        'Segunda Específica',
+        startDate,
+        endDate
+      )
 
       const response = await app.inject({
         method: 'GET',
@@ -480,7 +541,11 @@ describe('Get Active Campaign Integration Tests', () => {
       const startDate = now // Começa exatamente agora
       const endDate = new Date(now.getTime() + 24 * 60 * 60 * 1000) // Termina em 24h
 
-      const campaign = await createSpecificCampaign('Campanha Boundary', startDate, endDate)
+      const campaign = await createSpecificCampaign(
+        'Campanha Boundary',
+        startDate,
+        endDate
+      )
 
       const response = await app.inject({
         method: 'GET',
@@ -498,11 +563,15 @@ describe('Get Active Campaign Integration Tests', () => {
     it('should handle proposalDate within 30-day window', async () => {
       const now = new Date()
       const proposalDate = new Date(now.getTime() - 27 * 24 * 60 * 60 * 1000) // 27 dias atrás
-      
+
       // Campanha que terminou há 25 dias, mas que estava ativa quando a proposalDate foi feita
       const campaignStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) // 30 dias atrás
-      const campaignEnd = new Date(now.getTime() - 25 * 24 * 60 * 60 * 1000)   // 25 dias atrás
-      const campaign = await createSpecificCampaign('Campanha 30 Dias', campaignStart, campaignEnd)
+      const campaignEnd = new Date(now.getTime() - 25 * 24 * 60 * 60 * 1000) // 25 dias atrás
+      const campaign = await createSpecificCampaign(
+        'Campanha 30 Dias',
+        campaignStart,
+        campaignEnd
+      )
 
       const response = await app.inject({
         method: 'GET',
@@ -519,16 +588,24 @@ describe('Get Active Campaign Integration Tests', () => {
     it('should reject proposalDate exactly at 31-day boundary', async () => {
       const now = new Date()
       const proposalDate = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000)
-      
+
       // Campanha que terminou há 31 dias (fora dos 30 dias)
       const campaignStart = new Date(now.getTime() - 35 * 24 * 60 * 60 * 1000)
       const campaignEnd = new Date(now.getTime() - 31 * 24 * 60 * 60 * 1000)
-      await createSpecificCampaign('Campanha Muito Antiga', campaignStart, campaignEnd)
+      await createSpecificCampaign(
+        'Campanha Muito Antiga',
+        campaignStart,
+        campaignEnd
+      )
 
       // Criar campanha padrão ativa para ser retornada
       const currentStart = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)
       const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      const defaultCampaign = await createDefaultCampaign('Campanha Padrão', currentStart, currentEnd)
+      const defaultCampaign = await createDefaultCampaign(
+        'Campanha Padrão',
+        currentStart,
+        currentEnd
+      )
 
       const response = await app.inject({
         method: 'GET',
@@ -544,4 +621,4 @@ describe('Get Active Campaign Integration Tests', () => {
       expect(body.data.isDefault).toBe(true)
     })
   })
-}) 
+})

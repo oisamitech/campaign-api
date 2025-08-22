@@ -1,4 +1,7 @@
-import { CampaignRepository, CampaignWithRules } from '../infra/database/repositories/index.js'
+import {
+  CampaignRepository,
+  CampaignWithRules,
+} from '../infra/database/repositories/index.js'
 import { parseISODate } from '../utils/index.js'
 
 export interface GetActiveCampaignRequest {
@@ -36,32 +39,39 @@ export interface GetActiveCampaignUseCase {
 export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
   constructor(private readonly campaignRepository: CampaignRepository) {}
 
-  async execute(request: GetActiveCampaignRequest): Promise<ActiveCampaignResponse> {
+  async execute(
+    request: GetActiveCampaignRequest
+  ): Promise<ActiveCampaignResponse> {
     // 1ª PRIORIDADE: Buscar campanha específica que estava ativa na proposalDate (regra 30 dias)
     if (request.proposalDate) {
       const proposalDate = parseISODate(request.proposalDate)
-      
+
       if (!proposalDate) {
         throw new Error('Invalid proposalDate format.')
       }
 
-      const campaignByProposal = await this.campaignRepository.findActiveCampaignByProposalDate(proposalDate)
-      
+      const campaignByProposal =
+        await this.campaignRepository.findActiveCampaignByProposalDate(
+          proposalDate
+        )
+
       if (campaignByProposal) {
         return this.mapCampaignToResponse(campaignByProposal)
       }
     }
 
     // 2ª PRIORIDADE: Buscar campanha específica ativa (isDefault: false)
-    const specificCampaign = await this.campaignRepository.findActiveSpecificCampaign()
-    
+    const specificCampaign =
+      await this.campaignRepository.findActiveSpecificCampaign()
+
     if (specificCampaign) {
       return this.mapCampaignToResponse(specificCampaign)
     }
 
     // 3ª PRIORIDADE: Buscar campanha padrão ativa (isDefault: true)
-    const defaultCampaign = await this.campaignRepository.findActiveDefaultCampaign()
-    
+    const defaultCampaign =
+      await this.campaignRepository.findActiveDefaultCampaign()
+
     if (defaultCampaign) {
       return this.mapCampaignToResponse(defaultCampaign)
     }
@@ -69,7 +79,9 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
     throw new Error('No active campaign found')
   }
 
-  private mapCampaignToResponse(campaign: CampaignWithRules): ActiveCampaignResponse {
+  private mapCampaignToResponse(
+    campaign: CampaignWithRules
+  ): ActiveCampaignResponse {
     return {
       id: campaign.id.toString(),
       name: campaign.name,
@@ -94,4 +106,4 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
       })),
     }
   }
-} 
+}

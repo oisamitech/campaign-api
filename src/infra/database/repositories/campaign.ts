@@ -72,7 +72,9 @@ export interface CampaignRepository {
     excludeId?: string,
     isDefault?: boolean
   ): Promise<Campaign[]>
-  findActiveCampaignByProposalDate(proposalDate: Date): Promise<CampaignWithRules | null>
+  findActiveCampaignByProposalDate(
+    proposalDate: Date
+  ): Promise<CampaignWithRules | null>
   findActiveSpecificCampaign(): Promise<CampaignWithRules | null>
   findActiveDefaultCampaign(): Promise<CampaignWithRules | null>
 }
@@ -250,9 +252,11 @@ export class PrismaCampaignRepository implements CampaignRepository {
     })
   }
 
-  async findActiveCampaignByProposalDate(proposalDate: Date): Promise<CampaignWithRules | null> {
+  async findActiveCampaignByProposalDate(
+    proposalDate: Date
+  ): Promise<CampaignWithRules | null> {
     // Buscar TODAS as campanhas específicas (deixar a função isWithin30DaysAfterEnd fazer a validação completa)
-    const campaigns = await this.prisma.campaign.findMany({
+    const campaigns = (await this.prisma.campaign.findMany({
       where: {
         deletedAt: null,
         isDefault: false,
@@ -270,10 +274,10 @@ export class PrismaCampaignRepository implements CampaignRepository {
       orderBy: {
         createdAt: 'desc',
       },
-    }) as CampaignWithRules[]
+    })) as CampaignWithRules[]
 
     // Filtrar campanhas que estavam ativas na proposalDate E ainda estão nos 30 dias
-    const validCampaigns = campaigns.filter(campaign => 
+    const validCampaigns = campaigns.filter(campaign =>
       isWithin30DaysAfterEnd(proposalDate, campaign.startDate, campaign.endDate)
     )
     return validCampaigns.length > 0 ? validCampaigns[0] : null

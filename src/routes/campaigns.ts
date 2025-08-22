@@ -74,7 +74,6 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           ...result,
         })
       } catch (error: unknown) {
-        console.error('Error listing campaigns:', error)
         return reply.status(500).send({
           statusCode: 500,
           success: false,
@@ -101,8 +100,6 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           data: result,
         })
       } catch (error: unknown) {
-        console.error('Error creating campaign:', error)
-
         if (error instanceof Error && error.name === 'DateOverlapError') {
           return reply.status(409).send({
             statusCode: 409,
@@ -140,8 +137,6 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           data: result,
         })
       } catch (error: unknown) {
-        console.error('Error updating campaign:', error)
-
         if (error instanceof Error && error.message === 'Campaign not found') {
           return reply.status(404).send({
             statusCode: 404,
@@ -223,8 +218,6 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           data: result,
         })
       } catch (error: unknown) {
-        console.error('Error getting active campaign:', error)
-
         if (error instanceof Error) {
           if (error.message.includes('Invalid proposalDate format')) {
             return reply.status(400).send({
