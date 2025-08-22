@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../infra/database/prisma.js'
 import { healthSchema } from '../schemas/health.js'
+import { logger } from '../config/logger.js'
 
 export async function healthRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -21,7 +22,7 @@ export async function healthRoutes(fastify: FastifyInstance) {
         databaseResponseTime = endTime - startTime
       } catch (error) {
         databaseStatus = 'offline'
-        console.error('Database health check failed:', error)
+        logger.error({ error }, 'Database health check failed')
       }
 
       return {

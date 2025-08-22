@@ -80,7 +80,7 @@ export class UpdateCampaignUseCaseImpl implements UpdateCampaignUseCase {
     const hasDateChanges =
       updateParams.startDate !== undefined || updateParams.endDate !== undefined
 
-      const hasTypeChange = updateParams.isDefault !== undefined
+    const hasTypeChange = updateParams.isDefault !== undefined
 
     if (hasDateChanges || hasTypeChange) {
       const newStartDate = updateParams.startDate ?? existingCampaign.startDate
