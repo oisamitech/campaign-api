@@ -24,7 +24,6 @@ import {
   UpdateCampaignBody,
   DeleteCampaignParams,
 } from '../types/routes.js'
-import { logger } from '../config/logger.js'
 
 export async function campaignRoutes(fastify: FastifyInstance) {
   const campaignRepository = new PrismaCampaignRepository(prisma)
