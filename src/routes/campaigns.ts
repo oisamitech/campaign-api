@@ -24,6 +24,7 @@ import {
   UpdateCampaignBody,
   DeleteCampaignParams,
 } from '../types/routes.js'
+import { logger } from '../config/logger.js'
 
 export async function campaignRoutes(fastify: FastifyInstance) {
   const campaignRepository = new PrismaCampaignRepository(prisma)
@@ -68,7 +69,7 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           ...result,
         })
       } catch (error: unknown) {
-        console.error('Error listing campaigns:', error)
+        fastify.log.error({ error }, 'Error listing campaigns')
         return reply.status(500).send({
           statusCode: 500,
           success: false,
@@ -95,7 +96,7 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           data: result,
         })
       } catch (error: unknown) {
-        console.error('Error creating campaign:', error)
+        fastify.log.error({ error }, 'Error creating campaign')
 
         if (error instanceof Error && error.name === 'DateOverlapError') {
           return reply.status(409).send({
@@ -134,7 +135,7 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           data: result,
         })
       } catch (error: unknown) {
-        console.error('Error updating campaign:', error)
+        fastify.log.error({ error }, 'Error updating campaign')
 
         if (error instanceof Error && error.message === 'Campaign not found') {
           return reply.status(404).send({
