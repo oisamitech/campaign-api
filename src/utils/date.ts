@@ -1,24 +1,7 @@
-export function isWithin30DaysAfterEnd(
-  proposalDate: Date,
-  campaignStartDate: Date,
-  campaignEndDate: Date
-): boolean {
-  const proposalTime = proposalDate.getTime()
-  const startTime = campaignStartDate.getTime()
-  const endTime = campaignEndDate.getTime()
-
-  const wasActiveOnProposalDate =
-    proposalTime >= startTime && proposalTime <= endTime
-
-  if (!wasActiveOnProposalDate) {
-    return false
-  }
-
-  const currentDate = new Date()
-  const thirtyDaysAfterEnd = new Date(campaignEndDate)
-  thirtyDaysAfterEnd.setDate(thirtyDaysAfterEnd.getDate() + 30)
-
-  return currentDate <= thirtyDaysAfterEnd
+export function getThirtyDaysAgo(fromDate: Date = new Date()): Date {
+  const thirtyDaysAgo = new Date(fromDate)
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  return thirtyDaysAgo
 }
 
 export function parseISODate(dateString: string): Date | null {
