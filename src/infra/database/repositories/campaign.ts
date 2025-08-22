@@ -256,7 +256,8 @@ export class PrismaCampaignRepository implements CampaignRepository {
     proposalDate: Date
   ): Promise<CampaignWithRules | null> {
     const thirtyDaysAgo = getThirtyDaysAgo()
-    const minEndDate = proposalDate > thirtyDaysAgo ? proposalDate : thirtyDaysAgo
+    const minEndDate =
+      proposalDate > thirtyDaysAgo ? proposalDate : thirtyDaysAgo
 
     const campaign = await this.prisma.campaign.findFirst({
       where: {
