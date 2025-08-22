@@ -115,3 +115,11 @@ export type UpdateRuleRequest = FastifyRequest<{
   Params: UpdateRuleParams
   Body: UpdateRuleBody
 }>
+
+export interface GetActiveCampaignQuery {
+  proposalDate?: string
+}
+
+export type GetActiveCampaignRequest = FastifyRequest<{
+  Querystring: GetActiveCampaignQuery
+}>

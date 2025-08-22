@@ -478,3 +478,62 @@ export const deleteCampaignSchema: FastifySchema = {
     },
   },
 }
+
+export const getActiveCampaignQuerySchema = {
+  type: 'object',
+  properties: {
+    proposalDate: {
+      type: 'string',
+      format: 'date',
+      description: 'Proposal date in ISO format (YYYY-MM-DD)',
+    },
+  },
+  additionalProperties: false,
+}
+
+export const activeCampaignResponseSchema = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether the operation was successful',
+    },
+    data: campaignSchema,
+  },
+  required: ['success', 'data'],
+  additionalProperties: false,
+}
+
+export const getActiveCampaignSchema: FastifySchema = {
+  description: 'Get the currently active campaign based on priority rules',
+  tags: ['Campaigns'],
+  summary: 'Get active campaign',
+  security: [
+    {
+      bearerAuth: [],
+    },
+  ],
+  querystring: getActiveCampaignQuerySchema,
+  response: {
+    200: {
+      description: 'Active campaign found successfully',
+      ...activeCampaignResponseSchema,
+    },
+    400: {
+      description: 'Invalid proposalDate format',
+      ...errorResponseSchema,
+    },
+    401: {
+      description: 'Unauthorized - Bearer token required or invalid',
+      ...errorResponseSchema,
+    },
+    404: {
+      description: 'No active campaign found',
+      ...errorResponseSchema,
+    },
+    500: {
+      description: 'Internal server error',
+      ...errorResponseSchema,
+    },
+  },
+}
