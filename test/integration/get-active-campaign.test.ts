@@ -99,7 +99,6 @@ describe('Get Active Campaign Integration Tests', () => {
 
     // Aguardar conexão
     await prisma.$connect()
-
   })
 
   beforeEach(async () => {
@@ -116,10 +115,8 @@ describe('Get Active Campaign Integration Tests', () => {
     // Desconectar
     await prisma.$disconnect()
 
-
     // Fechar aplicação
     await app.close()
-
   })
 
   describe('GET /api/campaigns/active - Success Cases (200)', () => {
