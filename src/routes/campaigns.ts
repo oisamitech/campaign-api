@@ -241,6 +241,7 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           }
         }
 
+        request.log.error(error, 'Failed to get active campaign')
         return reply.status(500).send({
           statusCode: 500,
           success: false,
