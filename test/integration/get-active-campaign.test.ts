@@ -503,8 +503,6 @@ describe('Get Active Campaign Integration Tests', () => {
     })
 
     it('should apply previous campaign discount if scheduling is within 30 days after campaign end, based on proposal date and plan', async () => {
-      const now = new Date('2025-10-01T00:00:00Z')
-
       const campaign1Start = new Date('2025-01-01T00:00:00Z')
       const campaign1End = new Date('2025-09-30T23:59:59Z')
       const campaign1 = await createSpecificCampaign(
@@ -540,7 +538,11 @@ describe('Get Active Campaign Integration Tests', () => {
 
       const campaign2Start = new Date('2025-10-01T00:00:00Z')
       const campaign2End = new Date('2025-12-31T23:59:59Z')
-      const campaign2 = await createSpecificCampaign('Campanha 2', campaign2Start, campaign2End)
+      const campaign2 = await createSpecificCampaign(
+        'Campanha 2',
+        campaign2Start,
+        campaign2End
+      )
 
       const proposalDate = new Date('2025-07-08T00:00:00Z')
       const schedulingDate = new Date('2025-11-03T00:00:00Z')
@@ -591,7 +593,11 @@ describe('Get Active Campaign Integration Tests', () => {
 
       const campaign2Start = new Date('2025-08-01T00:00:00Z')
       const campaign2End = new Date('2025-08-31T23:59:59Z')
-      const campaign2 = await createSpecificCampaign('Campanha 2', campaign2Start, campaign2End)
+      const campaign2 = await createSpecificCampaign(
+        'Campanha 2',
+        campaign2Start,
+        campaign2End
+      )
 
       const proposalDate = new Date('2025-08-11T00:00:00Z')
       const schedulingDate = new Date('2025-09-11T00:00:00Z')
@@ -610,7 +616,6 @@ describe('Get Active Campaign Integration Tests', () => {
       expect(body.data.name).toBe('Campanha 2')
       expect(body.data.rules[0].plans).toContain(1)
     })
-
   })
 
   describe('GET /api/campaigns/active - Edge Cases', () => {
@@ -707,11 +712,7 @@ describe('Get Active Campaign Integration Tests', () => {
       // Criar campanha padrão ativa (não será considerada pois proposalDate é obrigatório)
       const currentStart = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)
       const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      await createDefaultCampaign(
-        'Campanha Padrão',
-        currentStart,
-        currentEnd
-      )
+      await createDefaultCampaign('Campanha Padrão', currentStart, currentEnd)
 
       const response = await app.inject({
         method: 'GET',
