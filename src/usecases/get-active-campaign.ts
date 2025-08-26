@@ -38,7 +38,7 @@ export interface GetActiveCampaignUseCase {
 }
 
 export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
-  constructor(private readonly campaignRepository: CampaignRepository) {}
+  constructor(private readonly campaignRepository: CampaignRepository) { }
 
   async execute(
     request: GetActiveCampaignRequest
@@ -59,7 +59,7 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
         throw new Error('No active campaign found')
       }
 
-      if (campaignByProposal && request.schedulingDate) {
+      if (request.schedulingDate) {
         const schedulingDate = parseISODate(request.schedulingDate)
         if (!schedulingDate) {
           throw new Error('Invalid schedulingDate format.')
@@ -80,9 +80,12 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
           await this.campaignRepository.findActiveCampaignByProposalDate(
             schedulingDate
           )
+
         if (campaignAtScheduling) {
           return this.mapCampaignToResponse(campaignAtScheduling)
         }
+
+        throw new Error('No active campaign found for the scheduling date')
       }
 
       // Se não há schedulingDate, ou não passou dos 30 dias, retorna campanha da proposta
