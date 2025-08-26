@@ -214,6 +214,7 @@ export async function campaignRoutes(fastify: FastifyInstance) {
         const query = request.query as GetActiveCampaignQuery
         const result = await getActiveCampaignUseCase.execute({
           proposalDate: query.proposalDate,
+          schedulingDate: query.schedulingDate,
         })
 
         return reply.status(200).send({
