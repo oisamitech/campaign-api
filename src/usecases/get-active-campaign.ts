@@ -6,6 +6,7 @@ import { parseISODate } from '../utils/index.js'
 
 export interface GetActiveCampaignRequest {
   proposalDate?: string
+  schedulingDate?: string
 }
 
 export interface ActiveCampaignResponse {
@@ -45,7 +46,6 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
     // 1ª PRIORIDADE: Buscar campanha específica que estava ativa na proposalDate (regra 30 dias)
     if (request.proposalDate) {
       const proposalDate = parseISODate(request.proposalDate)
-
       if (!proposalDate) {
         throw new Error('Invalid proposalDate format.')
       }
@@ -55,6 +55,37 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
           proposalDate
         )
 
+      if (!campaignByProposal) {
+        throw new Error('No active campaign found')
+      }
+
+      if (campaignByProposal && request.schedulingDate) {
+        const schedulingDate = parseISODate(request.schedulingDate)
+        if (!schedulingDate) {
+          throw new Error('Invalid schedulingDate format.')
+        }
+
+        // Se o agendamento for até 30 dias após o fim da campanha, retorna a campanha da proposta
+        const millisecondsPerDay = 1000 * 60 * 60 * 24
+        const diffDays =
+          (schedulingDate.getTime() - campaignByProposal.endDate.getTime()) /
+          millisecondsPerDay
+
+        if (diffDays <= 30) {
+          return this.mapCampaignToResponse(campaignByProposal)
+        }
+
+        // Se passou de 30 dias, busca campanha ativa no momento do agendamento
+        const campaignAtScheduling =
+          await this.campaignRepository.findActiveCampaignByProposalDate(
+            schedulingDate
+          )
+        if (campaignAtScheduling) {
+          return this.mapCampaignToResponse(campaignAtScheduling)
+        }
+      }
+
+      // Se não há schedulingDate, ou não passou dos 30 dias, retorna campanha da proposta
       if (campaignByProposal) {
         return this.mapCampaignToResponse(campaignByProposal)
       }
