@@ -219,14 +219,14 @@ describe('Get Active Campaign Integration Tests', () => {
       expect(body.data.isDefault).toBe(false)
     })
 
-    it('should ignore proposalDate if no specific campaign was active on that date', async () => {
+    it('should return 404 when proposalDate has no specific campaign active on that date', async () => {
       const now = new Date()
       const proposalDate = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000) // 60 dias atrás (nenhuma campanha ativa)
 
-      // Campanha específica ativa atualmente
+      // Campanha específica ativa atualmente (não será considerada pois proposalDate é obrigatório encontrar campanha)
       const currentStart = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)
       const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      const currentCampaign = await createSpecificCampaign(
+      await createSpecificCampaign(
         'Campanha Específica Atual',
         currentStart,
         currentEnd
@@ -238,15 +238,15 @@ describe('Get Active Campaign Integration Tests', () => {
         headers: getAuthHeaders(),
       })
 
-      expect(response.statusCode).toBe(200)
+      expect(response.statusCode).toBe(404)
 
       const body = JSON.parse(response.body)
-      expect(body.success).toBe(true)
-      expect(body.data.id).toBe(currentCampaign.id.toString())
-      expect(body.data.name).toBe('Campanha Específica Atual')
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Not Found')
+      expect(body.message).toBe('No active campaign found')
     })
 
-    it('should ignore proposalDate if specific campaign is outside 30-day window', async () => {
+    it('should return 404 when proposalDate specific campaign is outside 30-day window', async () => {
       const now = new Date()
       const proposalDate = new Date(now.getTime() - 50 * 24 * 60 * 60 * 1000) // 50 dias atrás
 
@@ -259,10 +259,10 @@ describe('Get Active Campaign Integration Tests', () => {
         oldEnd
       )
 
-      // Campanha padrão ativa atualmente
+      // Campanha padrão ativa atualmente (não será considerada pois proposalDate é obrigatório)
       const currentStart = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)
       const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      const defaultCampaign = await createDefaultCampaign(
+      await createDefaultCampaign(
         'Campanha Padrão Atual',
         currentStart,
         currentEnd
@@ -274,13 +274,12 @@ describe('Get Active Campaign Integration Tests', () => {
         headers: getAuthHeaders(),
       })
 
-      expect(response.statusCode).toBe(200)
+      expect(response.statusCode).toBe(404)
 
       const body = JSON.parse(response.body)
-      expect(body.success).toBe(true)
-      expect(body.data.id).toBe(defaultCampaign.id.toString())
-      expect(body.data.name).toBe('Campanha Padrão Atual')
-      expect(body.data.isDefault).toBe(true)
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Not Found')
+      expect(body.message).toBe('No active campaign found')
     })
 
     it('should return proper campaign structure with all fields and rules', async () => {
@@ -466,11 +465,11 @@ describe('Get Active Campaign Integration Tests', () => {
       expect(body.data.isDefault).toBe(false)
     })
 
-    it('should only consider specific campaigns for proposalDate (not default)', async () => {
+    it('should only consider specific campaigns for proposalDate (not default) and return 404 if none found', async () => {
       const now = new Date()
       const proposalDate = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000)
 
-      // Campanha padrão que estava ativa na proposalDate
+      // Campanha padrão que estava ativa na proposalDate (mas não é considerada para proposalDate)
       const proposalStart = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000)
       const proposalEnd = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
       await createDefaultCampaign(
@@ -479,10 +478,10 @@ describe('Get Active Campaign Integration Tests', () => {
         proposalEnd
       )
 
-      // Campanha específica ativa atualmente
+      // Campanha específica ativa atualmente (não será considerada pois proposalDate deve encontrar campanha específica)
       const currentStart = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
       const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      const currentCampaign = await createSpecificCampaign(
+      await createSpecificCampaign(
         'Campanha Específica Atual',
         currentStart,
         currentEnd
@@ -494,13 +493,13 @@ describe('Get Active Campaign Integration Tests', () => {
         headers: getAuthHeaders(),
       })
 
-      expect(response.statusCode).toBe(200)
+      expect(response.statusCode).toBe(404)
 
       const body = JSON.parse(response.body)
-      // Deve retornar a específica atual, ignorando a padrão da proposalDate
-      expect(body.data.id).toBe(currentCampaign.id.toString())
-      expect(body.data.name).toBe('Campanha Específica Atual')
-      expect(body.data.isDefault).toBe(false)
+      // Deve retornar 404 pois não encontrou campanha específica na proposalDate
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Not Found')
+      expect(body.message).toBe('No active campaign found')
     })
 
     it('should apply previous campaign discount if scheduling is within 30 days after campaign end, based on proposal date and plan', async () => {
@@ -692,7 +691,7 @@ describe('Get Active Campaign Integration Tests', () => {
       expect(body.data.id).toBe(campaign.id.toString())
     })
 
-    it('should reject proposalDate exactly at 31-day boundary', async () => {
+    it('should return 404 when proposalDate campaign is exactly at 31-day boundary', async () => {
       const now = new Date()
       const proposalDate = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000)
 
@@ -705,10 +704,10 @@ describe('Get Active Campaign Integration Tests', () => {
         campaignEnd
       )
 
-      // Criar campanha padrão ativa para ser retornada
+      // Criar campanha padrão ativa (não será considerada pois proposalDate é obrigatório)
       const currentStart = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)
       const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      const defaultCampaign = await createDefaultCampaign(
+      await createDefaultCampaign(
         'Campanha Padrão',
         currentStart,
         currentEnd
@@ -720,12 +719,13 @@ describe('Get Active Campaign Integration Tests', () => {
         headers: getAuthHeaders(),
       })
 
-      expect(response.statusCode).toBe(200)
+      expect(response.statusCode).toBe(404)
 
       const body = JSON.parse(response.body)
-      // Deve retornar a padrão atual, ignorando a específica fora dos 30 dias
-      expect(body.data.id).toBe(defaultCampaign.id.toString())
-      expect(body.data.isDefault).toBe(true)
+      // Deve retornar 404 pois a específica está fora dos 30 dias
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Not Found')
+      expect(body.message).toBe('No active campaign found')
     })
   })
 })
