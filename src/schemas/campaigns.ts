@@ -491,7 +491,7 @@ export const getActiveCampaignQuerySchema = {
       type: 'string',
       format: 'date',
       description: 'Scheduling date in ISO format (YYYY-MM-DD)',
-    }
+    },
   },
   additionalProperties: false,
 }

@@ -240,11 +240,12 @@ export class PrismaCampaignRepository implements CampaignRepository {
     excludeId?: string,
     isDefault?: boolean
   ): Promise<Campaign[]> {
+
     return this.prisma.campaign.findMany({
       where: {
         deletedAt: null,
         ...(excludeId && { id: { not: BigInt(excludeId) } }),
-        ...(isDefault && { isDefault: true }),
+        isDefault: isDefault ?? false,
         startDate: { lte: endDate },
         endDate: { gte: startDate },
       },
