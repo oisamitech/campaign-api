@@ -75,8 +75,7 @@ export interface CampaignRepository {
   findActiveCampaignByProposalDate(
     proposalDate: Date
   ): Promise<CampaignWithRules | null>
-  findActiveSpecificCampaign(): Promise<CampaignWithRules | null>
-  findActiveDefaultCampaign(): Promise<CampaignWithRules | null>
+  findCampaign(isDefault?: boolean): Promise<CampaignWithRules | null>
 }
 
 // Implementação do repositório usando Prisma
@@ -282,42 +281,13 @@ export class PrismaCampaignRepository implements CampaignRepository {
     })
     return campaign as CampaignWithRules | null
   }
-
-  async findActiveSpecificCampaign(): Promise<CampaignWithRules | null> {
+  async findCampaign(isDefault = true): Promise<CampaignWithRules | null> {
     const currentDate = new Date()
 
     const campaign = await this.prisma.campaign.findFirst({
       where: {
         deletedAt: null,
-        isDefault: false,
-        startDate: { lte: currentDate },
-        endDate: { gte: currentDate },
-      },
-      include: {
-        rules: {
-          where: {
-            deletedAt: null,
-          },
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
-
-    return campaign as CampaignWithRules | null
-  }
-
-  async findActiveDefaultCampaign(): Promise<CampaignWithRules | null> {
-    const currentDate = new Date()
-
-    const campaign = await this.prisma.campaign.findFirst({
-      where: {
-        deletedAt: null,
-        isDefault: true,
+        isDefault,
         startDate: { lte: currentDate },
         endDate: { gte: currentDate },
       },

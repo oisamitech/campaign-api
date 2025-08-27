@@ -38,7 +38,7 @@ export interface GetActiveCampaignUseCase {
 }
 
 export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
-  constructor(private readonly campaignRepository: CampaignRepository) { }
+  constructor(private readonly campaignRepository: CampaignRepository) {}
 
   async execute(
     request: GetActiveCampaignRequest
@@ -95,16 +95,14 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
     }
 
     // 2ª PRIORIDADE: Buscar campanha específica ativa (isDefault: false)
-    const specificCampaign =
-      await this.campaignRepository.findActiveSpecificCampaign()
+    const specificCampaign = await this.campaignRepository.findCampaign(false)
 
     if (specificCampaign) {
       return this.mapCampaignToResponse(specificCampaign)
     }
 
     // 3ª PRIORIDADE: Buscar campanha padrão ativa (isDefault: true)
-    const defaultCampaign =
-      await this.campaignRepository.findActiveDefaultCampaign()
+    const defaultCampaign = await this.campaignRepository.findCampaign()
 
     if (defaultCampaign) {
       return this.mapCampaignToResponse(defaultCampaign)
