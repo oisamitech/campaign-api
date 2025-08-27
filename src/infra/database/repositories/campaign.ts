@@ -261,7 +261,6 @@ export class PrismaCampaignRepository implements CampaignRepository {
     const campaign = await this.prisma.campaign.findFirst({
       where: {
         deletedAt: null,
-        isDefault: false,
         startDate: { lte: proposalDate },
         endDate: { gte: minEndDate },
       },

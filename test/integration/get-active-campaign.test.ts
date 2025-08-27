@@ -465,43 +465,6 @@ describe('Get Active Campaign Integration Tests', () => {
       expect(body.data.isDefault).toBe(false)
     })
 
-    it('should only consider specific campaigns for proposalDate (not default) and return 404 if none found', async () => {
-      const now = new Date()
-      const proposalDate = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000)
-
-      // Campanha padrão que estava ativa na proposalDate (mas não é considerada para proposalDate)
-      const proposalStart = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000)
-      const proposalEnd = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
-      await createDefaultCampaign(
-        'Campanha Padrão da Proposal',
-        proposalStart,
-        proposalEnd
-      )
-
-      // Campanha específica ativa atualmente (não será considerada pois proposalDate deve encontrar campanha específica)
-      const currentStart = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
-      const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      await createSpecificCampaign(
-        'Campanha Específica Atual',
-        currentStart,
-        currentEnd
-      )
-
-      const response = await app.inject({
-        method: 'GET',
-        url: `/api/campaigns/active?proposalDate=${proposalDate.toISOString().split('T')[0]}`,
-        headers: getAuthHeaders(),
-      })
-
-      expect(response.statusCode).toBe(404)
-
-      const body = JSON.parse(response.body)
-      // Deve retornar 404 pois não encontrou campanha específica na proposalDate
-      expect(body.success).toBe(false)
-      expect(body.error).toBe('Not Found')
-      expect(body.message).toBe('No active campaign found')
-    })
-
     it('should apply previous campaign discount if scheduling is within 30 days after campaign end, based on proposal date and plan', async () => {
       const campaign1Start = new Date('2025-01-01T00:00:00Z')
       const campaign1End = new Date('2025-09-30T23:59:59Z')
