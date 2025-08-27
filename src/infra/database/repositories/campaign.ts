@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { getThirtyDaysAgo } from '../../../utils/index.js'
 
 // Interface da entidade Campaign refatorada
 export interface Campaign {
@@ -71,6 +72,10 @@ export interface CampaignRepository {
     excludeId?: string,
     isDefault?: boolean
   ): Promise<Campaign[]>
+  findActiveCampaignByProposalDate(
+    proposalDate: Date
+  ): Promise<CampaignWithRules | null>
+  findCampaign(isDefault?: boolean): Promise<CampaignWithRules | null>
 }
 
 // Implementação do repositório usando Prisma
@@ -244,5 +249,63 @@ export class PrismaCampaignRepository implements CampaignRepository {
         endDate: { gte: startDate },
       },
     })
+  }
+
+  async findActiveCampaignByProposalDate(
+    proposalDate: Date
+  ): Promise<CampaignWithRules | null> {
+    const thirtyDaysAgo = getThirtyDaysAgo()
+    const minEndDate =
+      proposalDate > thirtyDaysAgo ? proposalDate : thirtyDaysAgo
+
+    const campaign = await this.prisma.campaign.findFirst({
+      where: {
+        deletedAt: null,
+        isDefault: false,
+        startDate: { lte: proposalDate },
+        endDate: { gte: minEndDate },
+      },
+      include: {
+        rules: {
+          where: {
+            deletedAt: null,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+    return campaign as CampaignWithRules | null
+  }
+  async findCampaign(isDefault = true): Promise<CampaignWithRules | null> {
+    const currentDate = new Date()
+
+    const campaign = await this.prisma.campaign.findFirst({
+      where: {
+        deletedAt: null,
+        isDefault,
+        startDate: { lte: currentDate },
+        endDate: { gte: currentDate },
+      },
+      include: {
+        rules: {
+          where: {
+            deletedAt: null,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    return campaign as CampaignWithRules | null
   }
 }
