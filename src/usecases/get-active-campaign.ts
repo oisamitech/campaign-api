@@ -57,44 +57,37 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
           normalizedProposalDate
         )
 
-      if (!campaignByProposal) {
-        throw new Error('No active campaign found')
-      }
+      // Se encontrou campanha na proposalDate, verifica a regra dos 30 dias
+      if (campaignByProposal) {
+        if (request.schedulingDate) {
+          const schedulingDate = parseISODate(request.schedulingDate)
+          if (!schedulingDate) {
+            throw new Error('Invalid schedulingDate format.')
+          }
 
-      if (request.schedulingDate) {
-        const schedulingDate = parseISODate(request.schedulingDate)
-        if (!schedulingDate) {
-          throw new Error('Invalid schedulingDate format.')
-        }
+          const normalizedSchedulingDate = normalizeDateToCampaignTime(schedulingDate)
 
-        const normalizedSchedulingDate = normalizeDateToCampaignTime(schedulingDate)
+          const millisecondsPerDay = 1000 * 60 * 60 * 24
+          const diffDays =
+            (normalizedSchedulingDate.getTime() - campaignByProposal.endDate.getTime()) /
+            millisecondsPerDay
 
-        // Se o agendamento for até 30 dias após o fim da campanha, retorna a campanha da proposta
-        const millisecondsPerDay = 1000 * 60 * 60 * 24
-        const diffDays =
-          (normalizedSchedulingDate.getTime() - campaignByProposal.endDate.getTime()) /
-          millisecondsPerDay
+          if (diffDays <= 30) {
+            return this.mapCampaignToResponse(campaignByProposal)
+          }
 
-        if (diffDays <= 30) {
+          const campaignAtScheduling =
+            await this.campaignRepository.findActiveCampaignByProposalDate(
+              normalizedSchedulingDate
+            )
+
+          if (campaignAtScheduling) {
+            return this.mapCampaignToResponse(campaignAtScheduling)
+          }
+
+        } else {
           return this.mapCampaignToResponse(campaignByProposal)
         }
-
-        // Se passou de 30 dias, busca campanha ativa no momento do agendamento
-        const campaignAtScheduling =
-          await this.campaignRepository.findActiveCampaignByProposalDate(
-            normalizedSchedulingDate
-          )
-
-        if (campaignAtScheduling) {
-          return this.mapCampaignToResponse(campaignAtScheduling)
-        }
-
-        throw new Error('No active campaign found for the scheduling date')
-      }
-
-      // Se não há schedulingDate, ou não passou dos 30 dias, retorna campanha da proposta
-      if (campaignByProposal) {
-        return this.mapCampaignToResponse(campaignByProposal)
       }
     }
 
