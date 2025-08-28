@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { getThirtyDaysAgo } from '../../../utils/index.js'
+import { getThirtyDaysAgo, normalizeDateToCampaignTime } from '../../../utils/index.js'
 
 // Interface da entidade Campaign refatorada
 export interface Campaign {
@@ -259,11 +259,21 @@ export class PrismaCampaignRepository implements CampaignRepository {
     const minEndDate =
       proposalDate > thirtyDaysAgo ? proposalDate : thirtyDaysAgo
 
+    const normalizedMinEndDate = normalizeDateToCampaignTime(minEndDate)
+
+    // Debug logs
+    console.log('=== DEBUG findActiveCampaignByProposalDate ===')
+    console.log('proposalDate:', proposalDate)
+    console.log('thirtyDaysAgo:', thirtyDaysAgo)
+    console.log('minEndDate:', minEndDate)
+    console.log('normalizedMinEndDate:', normalizedMinEndDate)
+    console.log('proposalDate > thirtyDaysAgo:', proposalDate > thirtyDaysAgo)
+
     const campaign = await this.prisma.campaign.findFirst({
       where: {
         deletedAt: null,
         startDate: { lte: proposalDate },
-        endDate: { gte: minEndDate },
+        endDate: { gte: normalizedMinEndDate },
       },
       include: {
         rules: {
@@ -279,6 +289,16 @@ export class PrismaCampaignRepository implements CampaignRepository {
         createdAt: 'desc',
       },
     })
+
+    console.log('Found campaign:', campaign ? {
+      id: campaign.id,
+      name: campaign.name,
+      startDate: campaign.startDate,
+      endDate: campaign.endDate,
+      isDefault: campaign.isDefault
+    } : null)
+    console.log('=== END DEBUG ===')
+
     return campaign as CampaignWithRules | null
   }
   async findCampaign(isDefault = true): Promise<CampaignWithRules | null> {
