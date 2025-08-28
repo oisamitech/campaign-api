@@ -261,14 +261,6 @@ export class PrismaCampaignRepository implements CampaignRepository {
 
     const normalizedMinEndDate = normalizeDateToCampaignTime(minEndDate)
 
-    // Debug logs
-    console.log('=== DEBUG findActiveCampaignByProposalDate ===')
-    console.log('proposalDate:', proposalDate)
-    console.log('thirtyDaysAgo:', thirtyDaysAgo)
-    console.log('minEndDate:', minEndDate)
-    console.log('normalizedMinEndDate:', normalizedMinEndDate)
-    console.log('proposalDate > thirtyDaysAgo:', proposalDate > thirtyDaysAgo)
-
     const campaign = await this.prisma.campaign.findFirst({
       where: {
         deletedAt: null,
@@ -289,15 +281,6 @@ export class PrismaCampaignRepository implements CampaignRepository {
         createdAt: 'desc',
       },
     })
-
-    console.log('Found campaign:', campaign ? {
-      id: campaign.id,
-      name: campaign.name,
-      startDate: campaign.startDate,
-      endDate: campaign.endDate,
-      isDefault: campaign.isDefault
-    } : null)
-    console.log('=== END DEBUG ===')
 
     return campaign as CampaignWithRules | null
   }
