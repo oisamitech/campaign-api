@@ -735,7 +735,6 @@ describe('Get Active Campaign Integration Tests', () => {
       
       const oldCampaignEnd = new Date(today)
       oldCampaignEnd.setDate(oldCampaignEnd.getDate() - 35) // Terminou há 35 dias
-      const normalizedOldEnd = normalizeDateToCampaignTime(oldCampaignEnd)
 
 
       // Criar uma campanha específica atual
@@ -784,7 +783,6 @@ describe('Get Active Campaign Integration Tests', () => {
       
       const oldCampaignEnd = new Date(today)
       oldCampaignEnd.setDate(oldCampaignEnd.getDate() - 35) // Terminou há 35 dias
-      const normalizedOldEnd = normalizeDateToCampaignTime(oldCampaignEnd)
 
       // Criar uma campanha padrão atual (não há campanha específica ativa)
       const defaultCampaignStart = new Date(today)
