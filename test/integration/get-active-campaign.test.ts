@@ -3,6 +3,7 @@ import { FastifyInstance } from 'fastify'
 import { createApp } from '../../src/app.js'
 import { PrismaClient } from '@prisma/client'
 import { env } from '../../src/config/env.js'
+import { normalizeDateToCampaignTime } from '../../src/utils/index.js'
 
 describe('Get Active Campaign Integration Tests', () => {
   let app: FastifyInstance
@@ -690,6 +691,131 @@ describe('Get Active Campaign Integration Tests', () => {
       expect(body.success).toBe(false)
       expect(body.error).toBe('Not Found')
       expect(body.message).toBe('No active campaign found')
+    })
+  })
+
+  describe('GET /api/campaigns/active - Same Date as StartDate Test', () => {
+    it('should find campaign when proposalDate equals campaign startDate', async () => {
+      // Criar uma campanha que começa hoje às 03:00 UTC
+      const today = new Date()
+      const campaignStart = normalizeDateToCampaignTime(today)
+      
+      const campaignEnd = new Date(today)
+      campaignEnd.setDate(campaignEnd.getDate() + 30) // Termina em 30 dias
+      const normalizedCampaignEnd = normalizeDateToCampaignTime(campaignEnd)
+
+      console.log('Test - campaignStart:', campaignStart)
+      console.log('Test - campaignEnd:', normalizedCampaignEnd)
+
+      const campaign = await createSpecificCampaign(
+        'Campanha Mesma Data Start',
+        campaignStart,
+        normalizedCampaignEnd
+      )
+
+      // Usar a mesma data do startDate como proposalDate
+      const proposalDateString = campaignStart.toISOString().split('T')[0]
+      
+      console.log('Test - proposalDateString:', proposalDateString)
+      console.log('Test - Created campaign:', {
+        id: campaign.id,
+        name: campaign.name,
+        startDate: campaign.startDate,
+        endDate: campaign.endDate
+      })
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/campaigns/active?proposalDate=${proposalDateString}`,
+        headers: getAuthHeaders(),
+      })
+
+      console.log('Test - Response status:', response.statusCode)
+      console.log('Test - Response body:', response.body)
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data.id).toBe(campaign.id.toString())
+      expect(body.data.name).toBe('Campanha Mesma Data Start')
+    })
+
+    it('should find campaign when proposalDate and schedulingDate equal campaign startDate', async () => {
+      // Criar uma campanha que começa hoje às 03:00 UTC
+      const today = new Date()
+      const campaignStart = normalizeDateToCampaignTime(today)
+      
+      const campaignEnd = new Date(today)
+      campaignEnd.setDate(campaignEnd.getDate() + 30) // Termina em 30 dias
+      const normalizedCampaignEnd = normalizeDateToCampaignTime(campaignEnd)
+
+      const campaign = await createSpecificCampaign(
+        'Campanha Mesma Data Start e Agendamento',
+        campaignStart,
+        normalizedCampaignEnd
+      )
+
+      // Usar a mesma data do startDate como proposalDate e schedulingDate
+      const dateString = campaignStart.toISOString().split('T')[0]
+      
+      console.log('Test - dateString:', dateString)
+      console.log('Test - campaign startDate:', campaign.startDate)
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/campaigns/active?proposalDate=${dateString}&schedulingDate=${dateString}`,
+        headers: getAuthHeaders(),
+      })
+
+      console.log('Test - Response status:', response.statusCode)
+      console.log('Test - Response body:', response.body)
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data.id).toBe(campaign.id.toString())
+      expect(body.data.name).toBe('Campanha Mesma Data Start e Agendamento')
+    })
+
+    it('should find campaign when proposalDate is today and campaign starts today at 03:00 UTC', async () => {
+      // Criar uma campanha que começa hoje às 03:00 UTC
+      const today = new Date()
+      const campaignStart = normalizeDateToCampaignTime(today)
+      
+      const campaignEnd = new Date(today)
+      campaignEnd.setDate(campaignEnd.getDate() + 7) // Termina em 7 dias
+      const normalizedCampaignEnd = normalizeDateToCampaignTime(campaignEnd)
+
+      const campaign = await createSpecificCampaign(
+        'Campanha Hoje 03:00 UTC',
+        campaignStart,
+        normalizedCampaignEnd
+      )
+
+      // Usar a data de hoje como proposalDate (sem horário)
+      const todayString = today.toISOString().split('T')[0]
+      
+      console.log('Test - todayString:', todayString)
+      console.log('Test - campaign startDate:', campaign.startDate)
+      console.log('Test - campaign endDate:', campaign.endDate)
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/campaigns/active?proposalDate=${todayString}`,
+        headers: getAuthHeaders(),
+      })
+
+      console.log('Test - Response status:', response.statusCode)
+      console.log('Test - Response body:', response.body)
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      expect(body.data.id).toBe(campaign.id.toString())
+      expect(body.data.name).toBe('Campanha Hoje 03:00 UTC')
     })
   })
 })
