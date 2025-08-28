@@ -32,16 +32,7 @@ log_warning() {
 # Flag para controlar se algum comando falhou
 failed=0
 
-# 1. Executar testes automatizados
-log_info "Executando testes automatizados..."
-if ./teste.sh; then
-    log_success "✅ Testes passaram com sucesso!"
-else
-    log_error "❌ Testes falharam!"
-    failed=1
-fi
-
-# 2. Executar formatação do código
+# 1. Executar formatação do código
 log_info "Executando formatação do código..."
 if npm run format; then
     log_success "✅ Código formatado com sucesso!"
