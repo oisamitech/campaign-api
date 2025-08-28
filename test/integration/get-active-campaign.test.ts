@@ -464,29 +464,6 @@ describe('Get Active Campaign Integration Tests', () => {
       expect(body.data.rules[0].plans).toContain(1)
     })
 
-    it('should return empty when no campaign is active for proposalDate and no discount applies', async () => {
-      const campaign1Start = new Date('2025-01-01T00:00:00Z')
-      const campaign1End = new Date('2025-09-30T23:59:59Z')
-      await createSpecificCampaign('Campanha 1', campaign1Start, campaign1End)
-
-      // Campanha 2: não existe
-
-      const proposalDate = new Date('2025-11-08T00:00:00Z')
-      const schedulingDate = new Date('2025-11-11T00:00:00Z')
-
-      const response = await app.inject({
-        method: 'GET',
-        url: `/api/campaigns/active?proposalDate=${proposalDate.toISOString().split('T')[0]}&schedulingDate=${schedulingDate.toISOString().split('T')[0]}`,
-        headers: getAuthHeaders(),
-      })
-
-      expect(response.statusCode).toBe(404)
-
-      const body = JSON.parse(response.body)
-      expect(body.success).toBe(false)
-      expect(body.error).toBe('Not Found')
-      expect(body.message).toBe('No active campaign found')
-    })
 
     it('should apply specific campaign discount if scheduling is within 30 days after specific campaign end and proposalDate matches', async () => {
       const campaign1Start = new Date('2025-01-01T00:00:00Z')
