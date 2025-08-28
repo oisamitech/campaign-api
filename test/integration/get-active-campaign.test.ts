@@ -220,68 +220,6 @@ describe('Get Active Campaign Integration Tests', () => {
       expect(body.data.isDefault).toBe(false)
     })
 
-    it('should return 404 when proposalDate has no specific campaign active on that date', async () => {
-      const now = new Date()
-      const proposalDate = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000) // 60 dias atrás (nenhuma campanha ativa)
-
-      // Campanha específica ativa atualmente (não será considerada pois proposalDate é obrigatório encontrar campanha)
-      const currentStart = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)
-      const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      await createSpecificCampaign(
-        'Campanha Específica Atual',
-        currentStart,
-        currentEnd
-      )
-
-      const response = await app.inject({
-        method: 'GET',
-        url: `/api/campaigns/active?proposalDate=${proposalDate.toISOString().split('T')[0]}`,
-        headers: getAuthHeaders(),
-      })
-
-      expect(response.statusCode).toBe(404)
-
-      const body = JSON.parse(response.body)
-      expect(body.success).toBe(false)
-      expect(body.error).toBe('Not Found')
-      expect(body.message).toBe('No active campaign found')
-    })
-
-    it('should return 404 when proposalDate specific campaign is outside 30-day window', async () => {
-      const now = new Date()
-      const proposalDate = new Date(now.getTime() - 50 * 24 * 60 * 60 * 1000) // 50 dias atrás
-
-      // Campanha específica que estava ativa na proposalDate mas está fora dos 30 dias
-      const oldStart = new Date(now.getTime() - 55 * 24 * 60 * 60 * 1000)
-      const oldEnd = new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000)
-      await createSpecificCampaign(
-        'Campanha Específica Muito Antiga',
-        oldStart,
-        oldEnd
-      )
-
-      // Campanha padrão ativa atualmente (não será considerada pois proposalDate é obrigatório)
-      const currentStart = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)
-      const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      await createDefaultCampaign(
-        'Campanha Padrão Atual',
-        currentStart,
-        currentEnd
-      )
-
-      const response = await app.inject({
-        method: 'GET',
-        url: `/api/campaigns/active?proposalDate=${proposalDate.toISOString().split('T')[0]}`,
-        headers: getAuthHeaders(),
-      })
-
-      expect(response.statusCode).toBe(404)
-
-      const body = JSON.parse(response.body)
-      expect(body.success).toBe(false)
-      expect(body.error).toBe('Not Found')
-      expect(body.message).toBe('No active campaign found')
-    })
 
     it('should return proper campaign structure with all fields and rules', async () => {
       const now = new Date()
@@ -659,39 +597,6 @@ describe('Get Active Campaign Integration Tests', () => {
       const body = JSON.parse(response.body)
       expect(body.data.id).toBe(campaign.id.toString())
     })
-
-    it('should return 404 when proposalDate campaign is exactly at 31-day boundary', async () => {
-      const now = new Date()
-      const proposalDate = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000)
-
-      // Campanha que terminou há 31 dias (fora dos 30 dias)
-      const campaignStart = new Date(now.getTime() - 35 * 24 * 60 * 60 * 1000)
-      const campaignEnd = new Date(now.getTime() - 31 * 24 * 60 * 60 * 1000)
-      await createSpecificCampaign(
-        'Campanha Muito Antiga',
-        campaignStart,
-        campaignEnd
-      )
-
-      // Criar campanha padrão ativa (não será considerada pois proposalDate é obrigatório)
-      const currentStart = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000)
-      const currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      await createDefaultCampaign('Campanha Padrão', currentStart, currentEnd)
-
-      const response = await app.inject({
-        method: 'GET',
-        url: `/api/campaigns/active?proposalDate=${proposalDate.toISOString().split('T')[0]}`,
-        headers: getAuthHeaders(),
-      })
-
-      expect(response.statusCode).toBe(404)
-
-      const body = JSON.parse(response.body)
-      // Deve retornar 404 pois a específica está fora dos 30 dias
-      expect(body.success).toBe(false)
-      expect(body.error).toBe('Not Found')
-      expect(body.message).toBe('No active campaign found')
-    })
   })
 
   describe('GET /api/campaigns/active - Same Date as StartDate Test', () => {
@@ -816,6 +721,208 @@ describe('Get Active Campaign Integration Tests', () => {
       expect(body.success).toBe(true)
       expect(body.data.id).toBe(campaign.id.toString())
       expect(body.data.name).toBe('Campanha Hoje 03:00 UTC')
+    })
+  })
+
+  describe('GET /api/campaigns/active - 30 Days Rule Test', () => {
+    it('should return current specific campaign when schedulingDate is more than 30 days after proposal campaign end', async () => {
+      const today = new Date()
+      
+      // Criar uma campanha antiga que terminou há mais de 30 dias
+      const oldCampaignStart = new Date(today)
+      oldCampaignStart.setDate(oldCampaignStart.getDate() - 60) // 60 dias atrás
+      const normalizedOldStart = normalizeDateToCampaignTime(oldCampaignStart)
+      
+      const oldCampaignEnd = new Date(today)
+      oldCampaignEnd.setDate(oldCampaignEnd.getDate() - 35) // Terminou há 35 dias
+      const normalizedOldEnd = normalizeDateToCampaignTime(oldCampaignEnd)
+
+      const oldCampaign = await createSpecificCampaign(
+        'Campanha Antiga',
+        normalizedOldStart,
+        normalizedOldEnd
+      )
+
+      // Criar uma campanha específica atual
+      const currentCampaignStart = new Date(today)
+      currentCampaignStart.setDate(currentCampaignStart.getDate() - 5) // Começou há 5 dias
+      const normalizedCurrentStart = normalizeDateToCampaignTime(currentCampaignStart)
+      
+      const currentCampaignEnd = new Date(today)
+      currentCampaignEnd.setDate(currentCampaignEnd.getDate() + 25) // Termina em 25 dias
+      const normalizedCurrentEnd = normalizeDateToCampaignTime(currentCampaignEnd)
+
+      const currentCampaign = await createSpecificCampaign(
+        'Campanha Atual Específica',
+        normalizedCurrentStart,
+        normalizedCurrentEnd
+      )
+
+      // proposalDate = data da campanha antiga
+      const proposalDateString = normalizedOldStart.toISOString().split('T')[0]
+      
+      // schedulingDate = hoje (mais de 30 dias após o fim da campanha antiga)
+      const schedulingDateString = today.toISOString().split('T')[0]
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/campaigns/active?proposalDate=${proposalDateString}&schedulingDate=${schedulingDateString}`,
+        headers: getAuthHeaders(),
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      // Deve retornar a campanha atual específica, não a antiga
+      expect(body.data.id).toBe(currentCampaign.id.toString())
+      expect(body.data.name).toBe('Campanha Atual Específica')
+    })
+
+    it('should return default campaign when no specific campaign is active and schedulingDate is more than 30 days after proposal campaign end', async () => {
+      const today = new Date()
+      
+      // Criar uma campanha antiga que terminou há mais de 30 dias
+      const oldCampaignStart = new Date(today)
+      oldCampaignStart.setDate(oldCampaignStart.getDate() - 60) // 60 dias atrás
+      const normalizedOldStart = normalizeDateToCampaignTime(oldCampaignStart)
+      
+      const oldCampaignEnd = new Date(today)
+      oldCampaignEnd.setDate(oldCampaignEnd.getDate() - 35) // Terminou há 35 dias
+      const normalizedOldEnd = normalizeDateToCampaignTime(oldCampaignEnd)
+
+      const oldCampaign = await createSpecificCampaign(
+        'Campanha Antiga',
+        normalizedOldStart,
+        normalizedOldEnd
+      )
+
+      // Criar uma campanha padrão atual (não há campanha específica ativa)
+      const defaultCampaignStart = new Date(today)
+      defaultCampaignStart.setDate(defaultCampaignStart.getDate() - 10) // Começou há 10 dias
+      const normalizedDefaultStart = normalizeDateToCampaignTime(defaultCampaignStart)
+      
+      const defaultCampaignEnd = new Date(today)
+      defaultCampaignEnd.setDate(defaultCampaignEnd.getDate() + 20) // Termina em 20 dias
+      const normalizedDefaultEnd = normalizeDateToCampaignTime(defaultCampaignEnd)
+
+      const defaultCampaign = await createDefaultCampaign(
+        'Campanha Padrão Atual',
+        normalizedDefaultStart,
+        normalizedDefaultEnd
+      )
+
+      // proposalDate = data da campanha antiga
+      const proposalDateString = normalizedOldStart.toISOString().split('T')[0]
+      
+      // schedulingDate = hoje (mais de 30 dias após o fim da campanha antiga)
+      const schedulingDateString = today.toISOString().split('T')[0]
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/campaigns/active?proposalDate=${proposalDateString}&schedulingDate=${schedulingDateString}`,
+        headers: getAuthHeaders(),
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      // Deve retornar a campanha padrão atual
+      expect(body.data.id).toBe(defaultCampaign.id.toString())
+      expect(body.data.name).toBe('Campanha Padrão Atual')
+    })
+
+    it('should return proposal campaign when schedulingDate is within 30 days after proposal campaign end', async () => {
+      const today = new Date()
+      
+      // Criar uma campanha que terminou há 15 dias (dentro dos 30 dias)
+      const campaignStart = new Date(today)
+      campaignStart.setDate(campaignStart.getDate() - 45) // 45 dias atrás
+      const normalizedStart = normalizeDateToCampaignTime(campaignStart)
+      
+      const campaignEnd = new Date(today)
+      campaignEnd.setDate(campaignEnd.getDate() - 15) // Terminou há 15 dias
+      const normalizedEnd = normalizeDateToCampaignTime(campaignEnd)
+
+      const proposalCampaign = await createSpecificCampaign(
+        'Campanha da Proposta',
+        normalizedStart,
+        normalizedEnd
+      )
+
+      // Criar uma campanha atual (que não deve ser retornada)
+      const currentCampaignStart = new Date(today)
+      currentCampaignStart.setDate(currentCampaignStart.getDate() - 5) // Começou há 5 dias
+      const normalizedCurrentStart = normalizeDateToCampaignTime(currentCampaignStart)
+      
+      const currentCampaignEnd = new Date(today)
+      currentCampaignEnd.setDate(currentCampaignEnd.getDate() + 25) // Termina em 25 dias
+      const normalizedCurrentEnd = normalizeDateToCampaignTime(currentCampaignEnd)
+
+      await createSpecificCampaign(
+        'Campanha Atual',
+        normalizedCurrentStart,
+        normalizedCurrentEnd
+      )
+
+      // proposalDate = data da campanha da proposta
+      const proposalDateString = normalizedStart.toISOString().split('T')[0]
+      
+      // schedulingDate = hoje (15 dias após o fim da campanha da proposta - dentro dos 30 dias)
+      const schedulingDateString = today.toISOString().split('T')[0]
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/campaigns/active?proposalDate=${proposalDateString}&schedulingDate=${schedulingDateString}`,
+        headers: getAuthHeaders(),
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      // Deve retornar a campanha da proposta, não a atual
+      expect(body.data.id).toBe(proposalCampaign.id.toString())
+      expect(body.data.name).toBe('Campanha da Proposta')
+    })
+
+    it('should return current campaign when no proposal campaign is found', async () => {
+      const today = new Date()
+      
+      // Criar uma campanha específica atual
+      const currentCampaignStart = new Date(today)
+      currentCampaignStart.setDate(currentCampaignStart.getDate() - 5) // Começou há 5 dias
+      const normalizedCurrentStart = normalizeDateToCampaignTime(currentCampaignStart)
+      
+      const currentCampaignEnd = new Date(today)
+      currentCampaignEnd.setDate(currentCampaignEnd.getDate() + 25) // Termina em 25 dias
+      const normalizedCurrentEnd = normalizeDateToCampaignTime(currentCampaignEnd)
+
+      const currentCampaign = await createSpecificCampaign(
+        'Campanha Atual',
+        normalizedCurrentStart,
+        normalizedCurrentEnd
+      )
+
+      // proposalDate = data antiga onde não há campanha
+      const oldDate = new Date(today)
+      oldDate.setDate(oldDate.getDate() - 100) // 100 dias atrás
+      const proposalDateString = oldDate.toISOString().split('T')[0]
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/campaigns/active?proposalDate=${proposalDateString}`,
+        headers: getAuthHeaders(),
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      const body = JSON.parse(response.body)
+      expect(body.success).toBe(true)
+      // Deve retornar a campanha atual
+      expect(body.data.id).toBe(currentCampaign.id.toString())
+      expect(body.data.name).toBe('Campanha Atual')
     })
   })
 })
