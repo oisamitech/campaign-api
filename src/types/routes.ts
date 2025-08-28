@@ -118,6 +118,7 @@ export type UpdateRuleRequest = FastifyRequest<{
 
 export interface GetActiveCampaignQuery {
   proposalDate?: string
+  schedulingDate?: string
 }
 
 export type GetActiveCampaignRequest = FastifyRequest<{

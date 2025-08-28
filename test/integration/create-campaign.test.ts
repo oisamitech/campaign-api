@@ -78,6 +78,50 @@ describe('Create Campaign Integration Tests', () => {
   })
 
   describe('POST /api/campaigns - Success Cases', () => {
+    it('should allow creating a specific campaign if a default campaign already exists', async () => {
+      const payload = {...getValidCampaignPayload(), isDefault: true}
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload,
+      })
+
+      const payloadIsDefaultFalse = {...getValidCampaignPayload(), isDefault: false}
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: payloadIsDefaultFalse,
+      })
+
+      expect(response.statusCode).toBe(201)
+    })
+
+    it('should return 409 when trying to create a specific campaign in the same period if one already exists', async () => {
+      const payload = {...getValidCampaignPayload(), isDefault: false}
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload,
+      })
+
+      const payloadIsDefaultFalse = {...getValidCampaignPayload(), isDefault: false}
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/campaigns',
+        headers: getAuthHeaders(),
+        payload: payloadIsDefaultFalse,
+      })
+
+      expect(response.statusCode).toBe(409)
+    })
+
     it('should create a campaign successfully with all required fields including rules', async () => {
       const payload = getValidCampaignPayload()
 

@@ -39,6 +39,5 @@ export function otelSetup(): void {
 }
 
 if (process.env.OPEN_TELEMETRY_IS_ENABLED === 'true') {
-  console.log('OPEN_TELEMETRY_IS_ENABLED is true')
   otelSetup()
 }
