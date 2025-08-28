@@ -2,7 +2,7 @@ import {
   CampaignRepository,
   CampaignWithRules,
 } from '../infra/database/repositories/index.js'
-import { parseISODate } from '../utils/index.js'
+import { parseISODate, normalizeDateToCampaignTime } from '../utils/index.js'
 
 export interface GetActiveCampaignRequest {
   proposalDate?: string
@@ -50,9 +50,11 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
         throw new Error('Invalid proposalDate format.')
       }
 
+      const normalizedProposalDate = normalizeDateToCampaignTime(proposalDate)
+
       const campaignByProposal =
         await this.campaignRepository.findActiveCampaignByProposalDate(
-          proposalDate
+          normalizedProposalDate
         )
 
       if (!campaignByProposal) {
@@ -65,10 +67,12 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
           throw new Error('Invalid schedulingDate format.')
         }
 
+        const normalizedSchedulingDate = normalizeDateToCampaignTime(schedulingDate)
+
         // Se o agendamento for até 30 dias após o fim da campanha, retorna a campanha da proposta
         const millisecondsPerDay = 1000 * 60 * 60 * 24
         const diffDays =
-          (schedulingDate.getTime() - campaignByProposal.endDate.getTime()) /
+          (normalizedSchedulingDate.getTime() - campaignByProposal.endDate.getTime()) /
           millisecondsPerDay
 
         if (diffDays <= 30) {
@@ -78,7 +82,7 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
         // Se passou de 30 dias, busca campanha ativa no momento do agendamento
         const campaignAtScheduling =
           await this.campaignRepository.findActiveCampaignByProposalDate(
-            schedulingDate
+            normalizedSchedulingDate
           )
 
         if (campaignAtScheduling) {
