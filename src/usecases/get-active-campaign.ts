@@ -7,6 +7,7 @@ import { parseISODate, normalizeDateToCampaignTime } from '../utils/index.js'
 export interface GetActiveCampaignRequest {
   proposalDate?: string
   schedulingDate?: string
+  plans: number[]
 }
 
 export interface ActiveCampaignResponse {
@@ -34,7 +35,7 @@ export interface ActiveCampaignResponse {
 }
 
 export interface GetActiveCampaignUseCase {
-  execute(request: GetActiveCampaignRequest): Promise<ActiveCampaignResponse>
+  execute(request: GetActiveCampaignRequest): Promise<ActiveCampaignResponse[]>
 }
 
 export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
@@ -42,7 +43,9 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
 
   async execute(
     request: GetActiveCampaignRequest
-  ): Promise<ActiveCampaignResponse> {
+  ): Promise<ActiveCampaignResponse[]> {
+    const activeCampaigns: ActiveCampaignResponse[] = []
+
     // 1ª PRIORIDADE: Buscar campanha específica que estava ativa na proposalDate (regra 30 dias)
     if (request.proposalDate) {
       const proposalDate = parseISODate(request.proposalDate)
@@ -51,6 +54,7 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
       }
 
       const normalizedProposalDate = normalizeDateToCampaignTime(proposalDate)
+
 
       const campaignByProposal =
         await this.campaignRepository.findActiveCampaignByProposalDate(
@@ -76,7 +80,7 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
           millisecondsPerDay
 
         if (diffDays <= 30) {
-          return this.mapCampaignToResponse(campaignByProposal)
+          activeCampaigns.push(this.mapCampaignToResponse(campaignByProposal))
         }
 
         // Se passou de 30 dias, busca campanha ativa no momento do agendamento
@@ -86,15 +90,14 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
           )
 
         if (campaignAtScheduling) {
-          return this.mapCampaignToResponse(campaignAtScheduling)
+          activeCampaigns.push(this.mapCampaignToResponse(campaignAtScheduling))
         }
 
-        throw new Error('No active campaign found for the scheduling date')
       }
 
       // Se não há schedulingDate, ou não passou dos 30 dias, retorna campanha da proposta
       if (campaignByProposal) {
-        return this.mapCampaignToResponse(campaignByProposal)
+        activeCampaigns.push(this.mapCampaignToResponse(campaignByProposal)) 
       }
     }
 
@@ -102,17 +105,44 @@ export class GetActiveCampaignUseCaseImpl implements GetActiveCampaignUseCase {
     const specificCampaign = await this.campaignRepository.findCampaign(false)
 
     if (specificCampaign) {
-      return this.mapCampaignToResponse(specificCampaign)
+      activeCampaigns.push(this.mapCampaignToResponse(specificCampaign))
     }
 
     // 3ª PRIORIDADE: Buscar campanha padrão ativa (isDefault: true)
     const defaultCampaign = await this.campaignRepository.findCampaign()
 
     if (defaultCampaign) {
-      return this.mapCampaignToResponse(defaultCampaign)
+      activeCampaigns.push(this.mapCampaignToResponse(defaultCampaign))
     }
 
-    throw new Error('No active campaign found')
+    const mapActiveCampaigns = this.mapActiveCampaigns(activeCampaigns, request.plans)
+
+    return [...new Map(mapActiveCampaigns.map(item => [item.id, item])).values()]
+   
+  }
+
+
+  private mapActiveCampaigns(activeCampaigns: ActiveCampaignResponse[], plans: number[]): ActiveCampaignResponse[] {
+    if (activeCampaigns.length === 0) {
+      throw new Error('No active campaign found')
+    }
+
+    if (activeCampaigns.length === 1) {
+      return activeCampaigns
+    }
+
+    if (plans.length === 1) {
+      const specificCampaign = activeCampaigns.find(c => !c.isDefault) || activeCampaigns[0]
+      return [specificCampaign]
+    }
+
+    const campaignsWithPlans = activeCampaigns.filter(campaign => 
+      campaign.rules.some(rule => 
+        rule.plans.some(planId => plans.includes(planId))
+      )
+    )
+
+    return campaignsWithPlans.length > 0 ? campaignsWithPlans : [activeCampaigns[0]]
   }
 
   private mapCampaignToResponse(
