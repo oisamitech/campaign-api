@@ -25,7 +25,7 @@ import {
   UpdateCampaignParams,
   UpdateCampaignBody,
   DeleteCampaignParams,
-  GetActiveCampaignQuery,
+  GetActiveCampaignBody,
 } from '../types/routes.js'
 
 export async function campaignRoutes(fastify: FastifyInstance) {
@@ -203,7 +203,7 @@ export async function campaignRoutes(fastify: FastifyInstance) {
     }
   )
 
-  fastify.get(
+  fastify.post(
     '/campaigns/active',
     {
       schema: getActiveCampaignSchema,
@@ -211,10 +211,11 @@ export async function campaignRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const query = request.query as GetActiveCampaignQuery
+        const body = request.body as GetActiveCampaignBody
         const result = await getActiveCampaignUseCase.execute({
-          proposalDate: query.proposalDate,
-          schedulingDate: query.schedulingDate,
+          proposalDate: body.proposalDate,
+          schedulingDate: body.schedulingDate,
+          plans: body.plans || [],
         })
 
         return reply.status(200).send({
@@ -242,12 +243,12 @@ export async function campaignRoutes(fastify: FastifyInstance) {
           }
         }
 
-        request.log.error(error, 'Failed to get active campaign')
+        request.log.error(error, 'Failed to get active campaigns')
         return reply.status(500).send({
           statusCode: 500,
           success: false,
           error: 'Internal server error',
-          message: 'Failed to get active campaign',
+          message: 'Failed to get active campaigns',
         })
       }
     }

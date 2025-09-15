@@ -479,7 +479,7 @@ export const deleteCampaignSchema: FastifySchema = {
   },
 }
 
-export const getActiveCampaignQuerySchema = {
+export const getActiveCampaignBodySchema = {
   type: 'object',
   properties: {
     proposalDate: {
@@ -491,8 +491,17 @@ export const getActiveCampaignQuerySchema = {
       type: 'string',
       format: 'date',
       description: 'Scheduling date in ISO format (YYYY-MM-DD)',
-    }
+    },
+    plans: {
+      type: 'array',
+      items: {
+        type: 'number',
+      },
+      minItems: 1, // Pelo menos 1 plano obrigatório
+      description: 'Array of plan IDs to filter campaigns (required)',
+    },
   },
+  required: ['plans'], // Tornar obrigatório
   additionalProperties: false,
 }
 
@@ -503,25 +512,29 @@ export const activeCampaignResponseSchema = {
       type: 'boolean',
       description: 'Whether the operation was successful',
     },
-    data: campaignSchema,
+    data: {
+      type: 'array',
+      items: campaignSchema,
+      description: 'Array of active campaigns',
+    },
   },
   required: ['success', 'data'],
   additionalProperties: false,
 }
 
 export const getActiveCampaignSchema: FastifySchema = {
-  description: 'Get the currently active campaign based on priority rules',
+  description: 'Get active campaigns based on plans and priority rules',
   tags: ['Campaigns'],
-  summary: 'Get active campaign',
+  summary: 'Get active campaigns',
   security: [
     {
       bearerAuth: [],
     },
   ],
-  querystring: getActiveCampaignQuerySchema,
+  body: getActiveCampaignBodySchema,
   response: {
     200: {
-      description: 'Active campaign found successfully',
+      description: 'Active campaigns found successfully',
       ...activeCampaignResponseSchema,
     },
     400: {
